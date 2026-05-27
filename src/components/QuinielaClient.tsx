@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import MatchCard from './MatchCard'
+import { useState, useEffect } from 'react'
 
 interface Phase {
   id: number
@@ -52,6 +53,16 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
   const [saving, setSaving] = useState<number | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const supabase = createClient()
+  const [saving, setSaving] = useState<number | null>(null)
+const [errorMsg, setErrorMsg] = useState<string | null>(null)
+const supabase = createClient()
+
+// Sincronizar predicciones del servidor cuando cambien
+useEffect(() => {
+  setLocalPredictions(
+    Object.fromEntries(predictions.map(p => [p.match_id, p.prediction]))
+  )
+}, [predictions])
 
   const currentPhase = phases.find(p => p.name === activePhase)
   const phaseMatches = matches.filter(m => m.phase === activePhase)
