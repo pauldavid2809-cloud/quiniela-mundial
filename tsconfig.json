@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "ignoreDeprecations": "6.0",
+    "downlevelIteration": true,
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
