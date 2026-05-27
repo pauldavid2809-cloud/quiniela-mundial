@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Recalculate total points for affected users
-    for (const userId of affectedUsers) {
+   for (const userId of Array.from(affectedUsers)) {
       await supabase.rpc('recalculate_user_points', { p_user_id: userId })
     }
 
