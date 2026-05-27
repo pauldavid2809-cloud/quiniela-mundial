@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { fetchRecentMatches, getMatchResult } from '@/lib/api-football'
 
@@ -7,12 +7,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-export async function POST(req: NextRequest) {
-  const authHeader = req.headers.get('authorization')
-  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
+export async function POST() {
   try {
     const recentMatches = await fetchRecentMatches()
 
@@ -27,7 +22,6 @@ export async function POST(req: NextRequest) {
     for (const match of recentMatches) {
       if (match.home_score === null || match.away_score === null) continue
 
-      // Find match in DB by team names
       const { data: dbMatch } = await supabase
         .from('matches')
         .select('id, phase, status')
@@ -37,7 +31,6 @@ export async function POST(req: NextRequest) {
 
       if (!dbMatch) continue
 
-      // Update score and status
       await supabase
         .from('matches')
         .update({
@@ -50,7 +43,6 @@ export async function POST(req: NextRequest) {
 
       updatedMatches++
 
-      // Only evaluate predictions if not already done
       if (dbMatch.status === 'completed') continue
 
       const result = getMatchResult(match.home_score, match.away_score)
@@ -86,7 +78,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Recalculate points for all affected users
     for (const userId of Array.from(affectedUsers)) {
       await supabase.rpc('recalculate_user_points', { p_user_id: userId })
     }
@@ -103,6 +94,6 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET(req: NextRequest) {
-  return POST(req)
+export async function GET() {
+  return POST()
 }
