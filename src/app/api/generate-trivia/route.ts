@@ -8,7 +8,7 @@ export async function POST() {
     }
 
     // 1. Usamos la variable de entorno de forma segura en la URL
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AQ.Ab8RN6KMlhFCGLOu8aZZLP3xXfHxaA_OhL3-2Gc6K5umA2WdGA`
 
     // 2. Adaptamos el cuerpo de la petición al formato oficial de Gemini
     const res = await fetch(url, {
