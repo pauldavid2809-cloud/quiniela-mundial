@@ -2,25 +2,26 @@ import { NextResponse } from 'next/server'
 
 export async function POST() {
   try {
-    const apiKey = process.env.ANTHROPIC_API_KEY
+    const apiKey = process.env.GEMINI_API_KEY
     if (!apiKey) {
-      return NextResponse.json({ error: 'ANTHROPIC_API_KEY no configurada' }, { status: 500 })
+      return NextResponse.json({ error: 'GEMINI_API_KEY no configurada' }, { status: 500 })
     }
 
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    // 1. Usamos la variable de entorno de forma segura en la URL
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`
+
+    // 2. Adaptamos el cuerpo de la petición al formato oficial de Gemini
+    const res = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-opus-4-5',
-        max_tokens: 600,
-        messages: [
+        contents: [
           {
-            role: 'user',
-            content: `Genera UNA pregunta de trivia sobre el fútbol o el Mundial FIFA (puede ser sobre historia, jugadores, récords, estadísticas, sedes, equipos, curiosidades, reglas, etc.).
+            parts: [
+              {
+                text: `Genera UNA pregunta de trivia sobre el fútbol o el Mundial FIFA (puede ser sobre historia, jugadores, récords, estadísticas, sedes, equipos, curiosidades, reglas, etc.).
 
 La pregunta debe ser interesante, de dificultad media, y que los fanáticos del fútbol puedan contestar.
 
@@ -34,23 +35,31 @@ Responde ÚNICAMENTE con un objeto JSON válido, sin texto adicional, sin comill
   "correct_answer": "a"
 }
 
-Solo una de las opciones (a, b, c o d) debe ser la correcta. Las otras tres deben ser plausibles pero incorrectas.`,
-          },
+Solo una de las opciones (a, b, c o d) debe ser la correcta. Las otras tres deben ser plausibles pero incorrectas.`
+              }
+            ]
+          }
         ],
+        // Opcional: Forzamos a Gemini a responder estrictamente en formato JSON
+        generationConfig: {
+          responseMimeType: "application/json"
+        }
       }),
     })
 
     const data = await res.json()
 
     if (!res.ok) {
-      return NextResponse.json({ error: data.error?.message || 'Error de IA' }, { status: 500 })
+      return NextResponse.json({ error: data.error?.message || 'Error de IA' }, { status: res.status || 500 })
     }
 
-    const text = data.content?.[0]?.text || ''
+    // 3. Adaptamos la lectura de la respuesta al formato de Gemini
+    // Gemini devuelve el texto en: data.candidates[0].content.parts[0].text
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
     const clean = text.replace(/```json|```/g, '').trim()
     const parsed = JSON.parse(clean)
 
-    // Validate structure
+    // 4. Tus validaciones originales de estructura se mantienen idénticas
     const required = ['question', 'option_a', 'option_b', 'option_c', 'option_d', 'correct_answer']
     for (const field of required) {
       if (!parsed[field]) {
@@ -62,6 +71,7 @@ Solo una de las opciones (a, b, c o d) debe ser la correcta. Las otras tres debe
       return NextResponse.json({ error: 'correct_answer debe ser a, b, c o d' }, { status: 500 })
     }
 
+    // Devolvemos el objeto JSON limpio al frontend
     return NextResponse.json(parsed)
   } catch (error) {
     console.error('generate-trivia error:', error)
