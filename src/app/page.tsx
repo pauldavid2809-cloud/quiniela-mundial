@@ -1,9 +1,111 @@
-import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 
 export default async function HomePage() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (user) redirect('/dashboard')
-  else redirect('/auth/login')
+
+  return (
+    <div className="min-h-screen flex flex-col justify-between text-white relative overflow-hidden">
+      {/* Background glow and decor */}
+      <div className="absolute top-[-10%] left-[50%] translate-x-[-50%] w-[120%] aspect-square bg-gradient-to-b from-gold-500/10 to-transparent rounded-full blur-[120px] pointer-events-none" />
+
+      {/* Navbar / Top log */}
+      <header className="p-6 max-w-7xl mx-auto w-full flex items-center justify-between z-10">
+        <div className="flex items-center gap-2">
+          <span className="text-3xl">🏆</span>
+          <span className="font-display text-2xl font-bold tracking-widest gold-shimmer">QUINIELA 2026</span>
+        </div>
+        <div className="flex items-center gap-4">
+          {user ? (
+            <Link href="/dashboard" className="btn-gold px-5 py-2 text-sm leading-none flex items-center">
+              ENTRAR AL PANEL
+            </Link>
+          ) : (
+            <>
+              <Link href="/auth/login" className="text-white/60 hover:text-gold-500 text-sm font-semibold tracking-wide uppercase transition-colors">
+                Iniciar Sesión
+              </Link>
+              <Link href="/auth/register" className="btn-gold px-5 py-2 text-sm leading-none flex items-center">
+                REGISTRARSE
+              </Link>
+            </>
+          )}
+        </div>
+      </header>
+
+      {/* Hero section */}
+      <main className="max-w-7xl mx-auto w-full px-6 py-12 flex-1 flex flex-col lg:flex-row items-center justify-center gap-12 z-10">
+        <div className="flex-1 space-y-6 text-center lg:text-left max-w-2xl">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gold-950/20 border border-gold-500/20 text-gold-400 text-xs font-bold uppercase tracking-widest animate-pulse">
+            🇨🇦 🇲🇽 🇺🇸 FIFA WORLD CUP 2026
+          </div>
+          <h1 className="font-display text-5xl sm:text-7xl text-white tracking-wide leading-none">
+            VIVE LA EMOCIÓN DEL <br />
+            <span className="gold-shimmer">MUNDIAL 2026</span>
+          </h1>
+          <p className="text-white/60 text-base sm:text-lg max-w-xl mx-auto lg:mx-0">
+            Predice los marcadores exactos de los 104 partidos del mundial de fútbol más grande de la historia. Responde trivias diarias de IA y compite con amigos por el trono del ranking.
+          </p>
+
+          <div className="pt-4 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
+            {user ? (
+              <Link href="/dashboard" className="btn-gold text-lg px-8 py-3.5 w-full sm:w-auto text-center">
+                IR A MIS PREDICCIONES
+              </Link>
+            ) : (
+              <>
+                <Link href="/auth/register" className="btn-gold text-lg px-8 py-3.5 w-full sm:w-auto text-center">
+                  CREAR MI CUENTA GRATIS
+                </Link>
+                <Link href="/auth/login" className="btn-ghost text-lg px-8 py-3 w-full sm:w-auto text-center">
+                  INICIAR SESIÓN
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Feature Grid / Cards */}
+        <div className="flex-1 w-full max-w-md sm:max-w-lg grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="glass-card p-5 border-white/5 hover:border-gold-500/30 transition-all">
+            <div className="text-3xl mb-3">⚽</div>
+            <h3 className="font-display text-lg text-white font-bold tracking-wide">PREDICCIONES</h3>
+            <p className="text-white/45 text-xs mt-1">
+              Acierta quién gana o si hay empate en cada partido para acumular los puntos base de cada ronda del torneo.
+            </p>
+          </div>
+
+          <div className="glass-card p-5 border-white/5 hover:border-gold-500/30 transition-all">
+            <div className="text-3xl mb-3">🎯</div>
+            <h3 className="font-display text-lg text-amber-400 font-bold tracking-wide">MARCADOR EXACTO</h3>
+            <p className="text-white/45 text-xs mt-1">
+              ¿Eres un experto táctico? Si adivinas los goles exactos del encuentro sumas un **Bono Especial de +2 puntos** extra.
+            </p>
+          </div>
+
+          <div className="glass-card p-5 border-white/5 hover:border-gold-500/30 transition-all">
+            <div className="text-3xl mb-3">🧠</div>
+            <h3 className="font-display text-lg text-white font-bold tracking-wide">TRIVIA DIARIA</h3>
+            <p className="text-white/45 text-xs mt-1">
+              Una pregunta aleatoria y única de IA sobre la historia de los mundiales cada día. ¡Responde en 10 segundos!
+            </p>
+          </div>
+
+          <div className="glass-card p-5 border-white/5 hover:border-gold-500/30 transition-all">
+            <div className="text-3xl mb-3">🏆</div>
+            <h3 className="font-display text-lg text-gold-500 font-bold tracking-wide">TABLA DE POSICIONES</h3>
+            <p className="text-white/45 text-xs mt-1">
+              Sigue tu progreso en tiempo real dentro del ranking contra toda la comunidad y consolídate como el campeón mundial.
+            </p>
+          </div>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="p-6 text-center border-t border-white/5 bg-black/20 text-white/40 text-xs z-10">
+        © {new Date().getFullYear()} Quiniela Mundial 2026. Todos los derechos reservados. No oficial.
+      </footer>
+    </div>
+  )
 }
