@@ -190,6 +190,29 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- FUNCIÓN PARA EL DISPARADOR DE RECALCULO AUTOMÁTICO
+CREATE OR REPLACE FUNCTION public.trigger_recalculate_user_points()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    PERFORM public.recalculate_user_points(OLD.user_id);
+    RETURN OLD;
+  ELSE
+    PERFORM public.recalculate_user_points(NEW.user_id);
+    RETURN NEW;
+  END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- DISPARADORES EN PREDICTIONS Y TRIVIA_ANSWERS
+CREATE OR REPLACE TRIGGER trigger_recalculate_predictions
+AFTER INSERT OR UPDATE OR DELETE ON public.predictions
+FOR EACH ROW EXECUTE FUNCTION public.trigger_recalculate_user_points();
+
+CREATE OR REPLACE TRIGGER trigger_recalculate_trivia
+AFTER INSERT OR UPDATE OR DELETE ON public.trivia_answers
+FOR EACH ROW EXECUTE FUNCTION public.trigger_recalculate_user_points();
+
 -- 8. ADMIN SERVICE POLICIES (para API routes con service_role)
 CREATE POLICY "Service role total access profiles" ON public.profiles FOR ALL TO service_role USING (true);
 CREATE POLICY "Service role total access matches" ON public.matches FOR ALL TO service_role USING (true);

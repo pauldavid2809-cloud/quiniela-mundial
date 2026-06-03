@@ -129,10 +129,6 @@ export default function TriviaPage() {
     })
 
     if (!error) {
-      if (isCorrect) {
-        // Recalculate total points
-        await supabase.rpc('recalculate_user_points', { p_user_id: userId })
-      }
       router.refresh()
     }
   }
