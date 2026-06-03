@@ -293,7 +293,7 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
                       predictedAwayScore={pred.predicted_away_score}
                       onPredict={handlePredict}
                       saving={saving === match.id}
-                      pointsValue={currentPhase.points_value}
+                      pointsValue={currentPhase?.points_value || 1}
                       isPhaseLocked={isPhaseLocked}
                     />
                   )
