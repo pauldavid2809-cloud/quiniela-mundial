@@ -12,8 +12,8 @@ export default async function HomePage() {
 
       {/* Navbar / Top log */}
       <header className="p-6 max-w-7xl mx-auto w-full flex items-center justify-between z-10">
-        <div className="flex items-center gap-2">
-          <span className="text-3xl">🏆</span>
+        <div className="flex items-center gap-3">
+          <img src="/logo-seminario.png" alt="Logo Seminario" className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]" />
           <span className="font-display text-2xl font-bold tracking-widest gold-shimmer">QUINIELA 2026</span>
         </div>
         <div className="flex items-center gap-4">
@@ -37,9 +37,15 @@ export default async function HomePage() {
       {/* Hero section */}
       <main className="max-w-7xl mx-auto w-full px-6 py-12 flex-1 flex flex-col lg:flex-row items-center justify-center gap-12 z-10">
         <div className="flex-1 space-y-6 text-center lg:text-left max-w-2xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gold-950/20 border border-gold-500/20 text-gold-400 text-xs font-bold uppercase tracking-widest animate-pulse">
-            🇨🇦 🇲🇽 🇺🇸 FIFA WORLD CUP 2026
+          <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-2.5">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gold-950/20 border border-gold-500/20 text-gold-400 text-xs font-bold uppercase tracking-widest">
+              🇨🇦 🇲🇽 🇺🇸 FIFA WORLD CUP 2026
+            </div>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/70 text-xs font-semibold uppercase tracking-wider">
+              🏛️ Coord. de Cultura del Seminario
+            </div>
           </div>
+          
           <h1 className="font-display text-5xl sm:text-7xl text-white tracking-wide leading-none">
             VIVE LA EMOCIÓN DEL <br />
             <span className="gold-shimmer">MUNDIAL 2026</span>
@@ -47,6 +53,16 @@ export default async function HomePage() {
           <p className="text-white/60 text-base sm:text-lg max-w-xl mx-auto lg:mx-0">
             Predice los marcadores exactos de los 104 partidos del mundial de fútbol más grande de la historia. Responde trivias diarias de IA y compite con amigos por el trono del ranking.
           </p>
+
+          {/* Seminario Logo Card Integration */}
+          <div className="flex items-center gap-4 p-4 rounded-xl bg-white/3 border border-white/5 max-w-md mx-auto lg:mx-0 hover:border-white/10 transition-colors">
+            <img src="/logo-seminario.png" alt="Seminario Logo" className="w-12 h-12 object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.15)]" />
+            <div className="text-left">
+              <div className="text-white/40 text-[9px] uppercase tracking-widest font-semibold leading-none mb-1">Una iniciativa de la</div>
+              <div className="text-gold-500 font-display text-base font-bold tracking-wide uppercase">Coordinación de Cultura</div>
+              <div className="text-white/80 text-[11px] font-medium leading-none mt-1">Seminario Diocesano</div>
+            </div>
+          </div>
 
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
             {user ? (
@@ -103,8 +119,14 @@ export default async function HomePage() {
       </main>
 
       {/* Footer */}
-      <footer className="p-6 text-center border-t border-white/5 bg-black/20 text-white/40 text-xs z-10">
-        © {new Date().getFullYear()} Quiniela Mundial 2026. Todos los derechos reservados. No oficial.
+      <footer className="p-6 text-center border-t border-white/5 bg-black/20 text-white/40 text-xs z-10 flex flex-col sm:flex-row items-center justify-between max-w-7xl mx-auto w-full gap-3">
+        <div>
+          © {new Date().getFullYear()} Quiniela Mundial 2026. Todos los derechos reservados. No oficial.
+        </div>
+        <div className="flex items-center gap-2">
+          <span>Diseñado y promovido por la</span>
+          <span className="text-gold-500 font-semibold">Coordinación de Cultura del Seminario</span>
+        </div>
       </footer>
     </div>
   )
