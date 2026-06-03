@@ -30,28 +30,28 @@ export interface OpenWCData {
   matches?: OpenMatch[]
 }
 
-// Flag emoji mapping by country name
-const FLAG_MAP: Record<string, string> = {
-  'Mexico': '🇲🇽', 'South Africa': '🇿🇦', 'South Korea': '🇰🇷',
-  'Czech Republic': '🇨🇿', 'Brazil': '🇧🇷', 'Argentina': '🇦🇷',
-  'France': '🇫🇷', 'Germany': '🇩🇪', 'Spain': '🇪🇸', 'England': '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
-  'Portugal': '🇵🇹', 'Netherlands': '🇳🇱', 'Belgium': '🇧🇪',
-  'Uruguay': '🇺🇾', 'Colombia': '🇨🇴', 'Japan': '🇯🇵',
-  'Morocco': '🇲🇦', 'Senegal': '🇸🇳', 'Nigeria': '🇳🇬',
-  'Cameroon': '🇨🇲', 'Ghana': '🇬🇭', 'Egypt': '🇪🇬',
-  'Saudi Arabia': '🇸🇦', 'Iran': '🇮🇷', 'Australia': '🇦🇺',
-  'USA': '🇺🇸', 'Canada': '🇨🇦', 'Ecuador': '🇪🇨',
-  'Peru': '🇵🇪', 'Chile': '🇨🇱', 'Venezuela': '🇻🇪',
-  'Switzerland': '🇨🇭', 'Croatia': '🇭🇷', 'Serbia': '🇷🇸',
-  'Denmark': '🇩🇰', 'Poland': '🇵🇱', 'Ukraine': '🇺🇦',
-  'Turkey': '🇹🇷', 'Austria': '🇦🇹', 'Sweden': '🇸🇪',
-  'Hungary': '🇭🇺', 'Greece': '🇬🇷', 'Romania': '🇷🇴',
-  'Slovakia': '🇸🇰', 'Slovenia': '🇸🇮', 'Albania': '🇦🇱',
-  'Qatar': '🇶🇦', 'Tunisia': '🇹🇳', 'Côte d\'Ivoire': '🇨🇮',
-  'Mali': '🇲🇱', 'Guinea': '🇬🇳', 'DR Congo': '🇨🇩',
-  'Iraq': '🇮🇶', 'Uzbekistan': '🇺🇿', 'New Zealand': '🇳🇿',
-  'Panama': '🇵🇦', 'Honduras': '🇭🇳', 'Costa Rica': '🇨🇷',
-  'Jamaica': '🇯🇲', 'Haiti': '🇭🇹',
+// ISO 3166-1 alpha-2 mapping by country name for FlagCDN
+const ISO_MAP: Record<string, string> = {
+  'Mexico': 'mx', 'South Africa': 'za', 'South Korea': 'kr',
+  'Czech Republic': 'cz', 'Brazil': 'br', 'Argentina': 'ar',
+  'France': 'fr', 'Germany': 'de', 'Spain': 'es', 'England': 'gb-eng',
+  'Portugal': 'pt', 'Netherlands': 'nl', 'Belgium': 'be',
+  'Uruguay': 'uy', 'Colombia': 'co', 'Japan': 'jp',
+  'Morocco': 'ma', 'Senegal': 'sn', 'Nigeria': 'ng',
+  'Cameroon': 'cm', 'Ghana': 'gh', 'Egypt': 'eg',
+  'Saudi Arabia': 'sa', 'Iran': 'ir', 'Australia': 'au',
+  'USA': 'us', 'Canada': 'ca', 'Ecuador': 'ec',
+  'Peru': 'pe', 'Chile': 'cl', 'Venezuela': 've',
+  'Switzerland': 'ch', 'Croatia': 'hr', 'Serbia': 'rs',
+  'Denmark': 'dk', 'Poland': 'pl', 'Ukraine': 'ua',
+  'Turkey': 'tr', 'Austria': 'at', 'Sweden': 'se',
+  'Hungary': 'hu', 'Greece': 'gr', 'Romania': 'ro',
+  'Slovakia': 'sk', 'Slovenia': 'si', 'Albania': 'al',
+  'Qatar': 'qa', 'Tunisia': 'tn', 'Côte d\'Ivoire': 'ci',
+  'Mali': 'ml', 'Guinea': 'gn', 'DR Congo': 'cd',
+  'Iraq': 'iq', 'Uzbekistan': 'uz', 'New Zealand': 'nz',
+  'Panama': 'pa', 'Honduras': 'hn', 'Costa Rica': 'cr',
+  'Jamaica': 'jm', 'Haiti': 'ht',
 }
 
 const TEAM_TRANSLATION: Record<string, string> = {
@@ -121,7 +121,11 @@ function translateTeam(teamName: string): string {
 }
 
 function getFlag(teamName: string): string {
-  return FLAG_MAP[teamName] || '🏳️'
+  const code = ISO_MAP[teamName]
+  if (code) {
+    return `https://flagcdn.com/w40/${code}.png`
+  }
+  return ''
 }
 
 function mapPhase(roundName: string): string {
