@@ -130,6 +130,7 @@ function getFlag(teamName: string): string {
 
 function mapPhase(roundName: string): string {
   const r = roundName.toLowerCase()
+  if (r.includes('third') || r.includes('3rd') || r.includes('tercer')) return 'final'
   if (r.includes('group') || r.includes('matchday') || r.includes('grupo')) return 'groups'
   if (r.includes('round of 32') || r.includes('32') || r.includes('treintaidosavo')) return 'round32'
   if (r.includes('round of 16') || r.includes('16') || r.includes('octavo')) return 'round16'
