@@ -16,7 +16,7 @@ export async function POST() {
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-specdec',
+        model: 'llama-3.3-70b-versatile',
         messages: [
           {
             role: 'user',
@@ -57,6 +57,20 @@ Solo una de las opciones (a, b, c o d) debe ser la correcta. Las otras tres debe
     for (const field of required) {
       if (!parsed[field]) {
         return NextResponse.json({ error: `Campo faltante: ${field}` }, { status: 500 })
+      }
+    }
+
+    // Normalizar correct_answer (ej: "option_a" -> "a", "A" -> "a")
+    if (typeof parsed.correct_answer === 'string') {
+      const cleanAns = parsed.correct_answer.toLowerCase().trim()
+      if (cleanAns === 'a' || cleanAns === 'option_a' || cleanAns.endsWith('_a') || cleanAns.endsWith(' a')) {
+        parsed.correct_answer = 'a'
+      } else if (cleanAns === 'b' || cleanAns === 'option_b' || cleanAns.endsWith('_b') || cleanAns.endsWith(' b')) {
+        parsed.correct_answer = 'b'
+      } else if (cleanAns === 'c' || cleanAns === 'option_c' || cleanAns.endsWith('_c') || cleanAns.endsWith(' c')) {
+        parsed.correct_answer = 'c'
+      } else if (cleanAns === 'd' || cleanAns === 'option_d' || cleanAns.endsWith('_d') || cleanAns.endsWith(' d')) {
+        parsed.correct_answer = 'd'
       }
     }
 
