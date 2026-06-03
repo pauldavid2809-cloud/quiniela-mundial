@@ -20,9 +20,9 @@ export async function POST() {
         messages: [
           {
             role: 'user',
-            content: `Genera UNA pregunta de trivia sobre el fútbol o el Mundial FIFA (puede ser sobre historia, jugadores, récords, estadísticas, sedes, equipos, curiosidades, reglas, etc.).
+            content: `Genera UNA pregunta de trivia única y exclusivamente relacionada con la historia de la Copa Mundial de la FIFA (Mundiales de fútbol, estadísticas de mundiales, jugadores históricos del mundial, ediciones pasadas, récords del mundial, sedes, selecciones participantes, anécdotas mundialistas, etc.).
 
-La pregunta debe ser interesante, de dificultad media, y que los fanáticos del fútbol puedan contestar.
+La pregunta debe ser interesante, con dificultad variada (de media a alta), y referirse estrictamente al contexto de los Mundiales de la FIFA. Evita a toda costa preguntas genéricas de fútbol de clubes (como Champions League, Copa Libertadores, ligas europeas, etc.) o jugadores en sus clubes; todo debe estar relacionado con la Copa del Mundo.
 
 Responde ÚNICAMENTE con un objeto JSON válido, sin texto adicional, sin comillas de código, exactamente en este formato:
 {
