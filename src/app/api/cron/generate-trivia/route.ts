@@ -63,7 +63,36 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: `La trivia para hoy (${todayStr}) ya existe.` })
     }
 
-    // 4. Query Groq API
+    // 4. Retrieve last 20 questions to prevent duplication
+    let previousQuestionsText = ''
+    try {
+      const { data: recentQs } = await supabase
+        .from('trivia_questions')
+        .select('question')
+        .order('created_at', { ascending: false })
+        .limit(20)
+      
+      if (recentQs && recentQs.length > 0) {
+        previousQuestionsText = recentQs.map(q => `- ${q.question}`).join('\n')
+      }
+    } catch (dbError) {
+      console.error('Error al obtener preguntas previas para evitar duplicados:', dbError)
+    }
+
+    // 5. Select random subtopic
+    const subtopics = [
+      'Goleadores históricos de los Mundiales (Klose, Ronaldo, Pelé, Fontaine, etc.)',
+      'Ediciones antiguas y curiosidades (Uruguay 1930, Italia 1934, Suiza 1954, etc.)',
+      'Mundiales recientes (Sudáfrica 2010, Brasil 2014, Rusia 2018, Qatar 2022)',
+      'Récords del Mundial (jugador más joven, gol más rápido, más partidos jugados, etc.)',
+      'Tarjetas rojas y amonestaciones famosas, polémicas o partidos con muchos goles',
+      'Sedes históricas, mascotas oficiales del mundial o estadios icónicos',
+      'Países debutantes o hazañas de selecciones revelación (ej. Marruecos 2022, Croacia 2018, Camerún 1990)',
+      'Directores técnicos históricos, campeones múltiples o finales dramáticas'
+    ]
+    const randomSubtopic = subtopics[Math.floor(Math.random() * subtopics.length)]
+
+    // 6. Query Groq API
     const groqKey = process.env.GROQ_API_KEY
     if (!groqKey) {
       return NextResponse.json({ error: 'GROQ_API_KEY no configurado en variables de entorno' }, { status: 500 })
@@ -71,18 +100,25 @@ export async function POST(req: Request) {
 
     const groqUrl = 'https://api.groq.com/openai/v1/chat/completions'
 
-    const prompt = `Genera una pregunta de trivia única, verídica, histórica y muy interesante en español sobre la historia de los mundiales de fútbol de la FIFA. 
-    Debe ser de opción múltiple con 4 opciones. La respuesta correcta debe ser clara e inequívoca.
-    Devuelve estrictamente un objeto JSON con el siguiente formato exacto sin agregar explicaciones fuera del JSON:
-    {
-      "question": "La pregunta...",
-      "option_a": "Opción A",
-      "option_b": "Opción B",
-      "option_c": "Opción C",
-      "option_d": "Opción D",
-      "correct_answer": "a"
-    }
-    Nota: correct_answer debe ser obligatoriamente una de las letras minúsculas: 'a', 'b', 'c' o 'd'.`
+    const prompt = `Genera UNA pregunta de trivia única y exclusivamente relacionada con la historia de la Copa Mundial de la FIFA.
+
+Para asegurar que sea variada, enfócate preferentemente en este subtema o área: ${randomSubtopic}.
+
+La pregunta debe ser interesante, con dificultad variada (de media a alta), y referirse estrictamente al contexto de los Mundiales de la FIFA. Evita a toda costa preguntas genéricas de fútbol de clubes (como Champions League, Copa Libertadores, ligas europeas, etc.) o jugadores en sus clubes; todo debe estar relacionado con la Copa del Mundo.
+
+${previousQuestionsText ? `IMPORTANTE: Para evitar repeticiones, NO debes generar ninguna pregunta idéntica ni muy similar a las siguientes preguntas que ya existen en la base de datos:\n${previousQuestionsText}` : ''}
+
+Responde ÚNICAMENTE con un objeto JSON válido, sin texto adicional, sin comillas de código, exactamente en este formato:
+{
+  "question": "¿Pregunta aquí?",
+  "option_a": "Primera opción",
+  "option_b": "Segunda opción",
+  "option_c": "Tercera opción",
+  "option_d": "Cuarta opción",
+  "correct_answer": "a"
+}
+
+Solo una de las opciones (a, b, c o d) debe ser la correcta. Las otras tres deben ser plausibles pero incorrectas.`
 
     const response = await fetch(groqUrl, {
       method: 'POST',
@@ -101,7 +137,7 @@ export async function POST(req: Request) {
         response_format: {
           type: 'json_object',
         },
-        temperature: 0.7,
+        temperature: 1.0,
       }),
     })
 
@@ -117,18 +153,35 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Respuesta vacía de Groq' }, { status: 500 })
     }
 
-    // 5. Parse and Validate JSON
+    // 7. Parse and Validate JSON
     const parsed = JSON.parse(textResult.trim())
-    if (!parsed.question || !parsed.option_a || !parsed.option_b || !parsed.option_c || !parsed.option_d || !parsed.correct_answer) {
-      throw new Error('Formato de datos de Groq incompleto: ' + textResult)
+    const required = ['question', 'option_a', 'option_b', 'option_c', 'option_d', 'correct_answer']
+    for (const field of required) {
+      if (!parsed[field]) {
+        return NextResponse.json({ error: `Campo faltante en respuesta de Groq: ${field}` }, { status: 500 })
+      }
+    }
+
+    // Normalizar correct_answer (ej: "option_a" -> "a", "A" -> "a")
+    if (typeof parsed.correct_answer === 'string') {
+      const cleanAns = parsed.correct_answer.toLowerCase().trim()
+      if (cleanAns === 'a' || cleanAns === 'option_a' || cleanAns.endsWith('_a') || cleanAns.endsWith(' a')) {
+        parsed.correct_answer = 'a'
+      } else if (cleanAns === 'b' || cleanAns === 'option_b' || cleanAns.endsWith('_b') || cleanAns.endsWith(' b')) {
+        parsed.correct_answer = 'b'
+      } else if (cleanAns === 'c' || cleanAns === 'option_c' || cleanAns.endsWith('_c') || cleanAns.endsWith(' c')) {
+        parsed.correct_answer = 'c'
+      } else if (cleanAns === 'd' || cleanAns === 'option_d' || cleanAns.endsWith('_d') || cleanAns.endsWith(' d')) {
+        parsed.correct_answer = 'd'
+      }
     }
 
     const correct = parsed.correct_answer.toLowerCase()
     if (!['a', 'b', 'c', 'd'].includes(correct)) {
-      throw new Error('Respuesta correcta inválida: ' + correct)
+      return NextResponse.json({ error: 'correct_answer debe ser a, b, c o d' }, { status: 500 })
     }
 
-    // 6. Insert into database
+    // 8. Insert into database
     const { error: insertError } = await supabase
       .from('trivia_questions')
       .insert({
@@ -153,7 +206,7 @@ export async function POST(req: Request) {
     })
   } catch (error: any) {
     console.error('generate-trivia API Error:', error)
-    return NextResponse.json({ error: error?.message || 'Error interno del servidor' }, { status: 500 })
+    return NextResponse.json({ error: error?.message || 'Error al generar la pregunta' }, { status: 500 })
   }
 }
 
