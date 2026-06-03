@@ -189,7 +189,7 @@ export default function MatchCard({
                 {formatTz(zonedDate, 'dd MMM', { locale: es, timeZone })}
               </div>
               <div className="text-white/70 text-xs font-semibold">
-                {formatTz(zonedDate, 'HH:mm', { timeZone })}
+                {formatTz(zonedDate, 'h:mm a', { timeZone })}
               </div>
             </div>
           )}

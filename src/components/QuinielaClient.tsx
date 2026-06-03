@@ -70,8 +70,19 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
   const currentPhase = phases.find(p => p.name === activePhase)
   const phaseMatches = matches.filter(m => m.phase === activePhase)
 
-  // Check if group stage is locked (June 11, 2026 19:00 UTC matches begin)
-  const isGroupStageLocked = new Date() >= new Date('2026-06-11T19:00:00Z')
+  // Dynamic lock check: a phase is locked if the current time is past the earliest match start date of that phase.
+  const getPhaseLockStatus = (phaseName: string) => {
+    const phaseMatchesWithDates = matches
+      .filter(m => m.phase === phaseName && m.match_date)
+      .map(m => new Date(m.match_date))
+      
+    if (phaseMatchesWithDates.length === 0) return false // No matches/dates loaded yet, open
+
+    const earliestDate = new Date(Math.min(...phaseMatchesWithDates.map(d => d.getTime())))
+    return new Date() >= earliestDate
+  }
+
+  const isCurrentPhaseLocked = getPhaseLockStatus(activePhase)
 
   // Group by day for visual separation
   const groupedByDay = phaseMatches.reduce((acc, m) => {
@@ -93,8 +104,8 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
     const match = matches.find(m => m.id === matchId)
     if (!match) return
     
-    // Check lock status
-    const isLocked = match.status !== 'scheduled' || (match.phase === 'groups' && isGroupStageLocked)
+    // Check dynamic lock status for this match's phase
+    const isLocked = match.status !== 'scheduled' || getPhaseLockStatus(match.phase)
     if (isLocked) return
 
     setSaving(matchId)
@@ -172,18 +183,25 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
         {phases.map(phase => {
           const predCount = phasePredCount(phase.name)
           const matchCount = phaseMatchCount(phase.name)
+          const isPhaseLocked = getPhaseLockStatus(phase.name)
+          // Convenient auto-open: accessible if unlocked manually OR if matches are loaded and phase hasn't started yet
+          const isPhaseOpen = phase.is_unlocked || (matchCount > 0 && !isPhaseLocked)
 
           return (
             <button
               key={phase.name}
-              onClick={() => phase.is_unlocked && setActivePhase(phase.name)}
+              onClick={() => isPhaseOpen && setActivePhase(phase.name)}
               className={`phase-tab flex items-center gap-1.5 ${
-                activePhase === phase.name ? 'active' : phase.is_unlocked ? '' : 'locked'
+                activePhase === phase.name ? 'active' : isPhaseOpen ? '' : 'locked'
               }`}
             >
-              {!phase.is_unlocked && <span className="text-xs">🔒</span>}
+              {isPhaseLocked ? (
+                <span className="text-xs" title="Fase cerrada (partido en curso/terminado)">🔒</span>
+              ) : !isPhaseOpen ? (
+                <span className="text-xs" title="Esperando confirmación de clasificados">🔒</span>
+              ) : null}
               <span>{phase.display_name}</span>
-              {phase.is_unlocked && matchCount > 0 && (
+              {isPhaseOpen && matchCount > 0 && (
                 <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded-full">
                   {predCount}/{matchCount}
                 </span>
@@ -194,21 +212,21 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
         })}
       </div>
 
-      {/* Group stage lock info banner */}
-      {activePhase === 'groups' && isGroupStageLocked && (
+      {/* Phase lock info banner */}
+      {isCurrentPhaseLocked && (
         <div className="mb-4 p-3 bg-red-950/30 border border-red-500/30 text-red-300 text-sm rounded-lg flex items-center gap-2">
           <span>🔒</span>
-          <span>La Fase de Grupos se encuentra **CERRADA**. El torneo ya ha comenzado y no se permiten más predicciones.</span>
+          <span>Esta fase se encuentra **CERRADA**. El primer partido de esta fase ya ha comenzado y no se permiten más predicciones.</span>
         </div>
       )}
 
       {/* Phase locked message */}
-      {!currentPhase?.is_unlocked ? (
+      {!(currentPhase?.is_unlocked || (phaseMatches.length > 0 && !isCurrentPhaseLocked)) ? (
         <div className="glass-card p-12 text-center">
           <div className="text-5xl mb-4">🔒</div>
           <h3 className="font-display text-2xl text-white/70 mb-2">FASE BLOQUEADA</h3>
-          <p className="text-white/40">
-            Esta fase se desbloqueará cuando se confirmen todos los equipos participantes.
+          <p className="text-white/40 max-w-md mx-auto">
+            Esta fase se abrirá automáticamente para predicciones tan pronto como se definan y carguen los equipos de sus partidos, y permanecerá abierta hasta que comience el primer encuentro de la misma.
           </p>
         </div>
       ) : phaseMatches.length === 0 ? (
@@ -237,6 +255,7 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
                     predicted_home_score: null,
                     predicted_away_score: null
                   }
+                  const isPhaseLocked = getPhaseLockStatus(match.phase)
                   
                   return (
                     <MatchCard
@@ -248,7 +267,7 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
                       onPredict={handlePredict}
                       saving={saving === match.id}
                       pointsValue={currentPhase.points_value}
-                      isPhaseLocked={match.phase === 'groups' && isGroupStageLocked}
+                      isPhaseLocked={isPhaseLocked}
                     />
                   )
                 })}
