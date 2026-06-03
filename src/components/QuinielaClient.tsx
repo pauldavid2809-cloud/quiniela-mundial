@@ -136,6 +136,7 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
 
     if (error) {
       console.error(error)
+      alert(`Error al guardar predicción: ${error.message}\n(Asegúrate de haber ejecutado la consulta SQL de alteración de columnas en Supabase)`)
       // revert on error
       const pred = predictions.find(p => p.match_id === matchId)
       setLocalPredictions(prev => ({
