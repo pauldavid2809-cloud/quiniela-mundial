@@ -63,13 +63,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: `La trivia para hoy (${todayStr}) ya existe.` })
     }
 
-    // 4. Query Gemini API
-    const geminiKey = process.env.GEMINI_API_KEY
-    if (!geminiKey) {
-      return NextResponse.json({ error: 'GEMINI_API_KEY no configurado en variables de entorno' }, { status: 500 })
+    // 4. Query Groq API
+    const groqKey = process.env.GROQ_API_KEY
+    if (!groqKey) {
+      return NextResponse.json({ error: 'GROQ_API_KEY no configurado en variables de entorno' }, { status: 500 })
     }
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`
+    const groqUrl = 'https://api.groq.com/openai/v1/chat/completions'
 
     const prompt = `Genera una pregunta de trivia única, verídica, histórica y muy interesante en español sobre la historia de los mundiales de fútbol de la FIFA. 
     Debe ser de opción múltiple con 4 opciones. La respuesta correcta debe ser clara e inequívoca.
@@ -84,35 +84,43 @@ export async function POST(req: Request) {
     }
     Nota: correct_answer debe ser obligatoriamente una de las letras minúsculas: 'a', 'b', 'c' o 'd'.`
 
-    const response = await fetch(geminiUrl, {
+    const response = await fetch(groqUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${groqKey}`,
       },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          responseMimeType: 'application/json',
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        response_format: {
+          type: 'json_object',
         },
+        temperature: 0.7,
       }),
     })
 
     if (!response.ok) {
       const errText = await response.text()
-      console.error('Gemini API Error:', errText)
-      return NextResponse.json({ error: 'Error al consultar API de Gemini' }, { status: 500 })
+      console.error('Groq API Error:', errText)
+      return NextResponse.json({ error: 'Error al consultar API de Groq' }, { status: 500 })
     }
 
     const resJson = await response.json()
-    const textResult = resJson?.candidates?.[0]?.content?.parts?.[0]?.text
+    const textResult = resJson?.choices?.[0]?.message?.content
     if (!textResult) {
-      return NextResponse.json({ error: 'Respuesta vacía de Gemini' }, { status: 500 })
+      return NextResponse.json({ error: 'Respuesta vacía de Groq' }, { status: 500 })
     }
 
     // 5. Parse and Validate JSON
     const parsed = JSON.parse(textResult.trim())
     if (!parsed.question || !parsed.option_a || !parsed.option_b || !parsed.option_c || !parsed.option_d || !parsed.correct_answer) {
-      throw new Error('Formato de datos de Gemini incompleto: ' + textResult)
+      throw new Error('Formato de datos de Groq incompleto: ' + textResult)
     }
 
     const correct = parsed.correct_answer.toLowerCase()
