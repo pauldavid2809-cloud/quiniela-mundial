@@ -174,7 +174,7 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
           <span className="gold-shimmer">QUINIELA</span>
         </h1>
         <p className="text-white/50 text-sm mt-1">
-          Predice los marcadores exactos. ¡Acierto del ganador = puntos base, acierto del marcador exacto = <span className="text-gold-500 font-bold">+2 puntos extra</span>!
+          Predice los marcadores exactos. ¡Acierto del ganador/empate = 1 punto, acierto del marcador exacto = <span className="text-gold-500 font-bold">3 puntos</span>!
         </p>
       </div>
 
@@ -206,7 +206,7 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
                   {predCount}/{matchCount}
                 </span>
               )}
-              <span className="text-[10px] text-gold-500/60 ml-0.5">+{phase.points_value}pt</span>
+              <span className="text-[10px] text-gold-500/60 ml-0.5">1/3 pt</span>
             </button>
           )
         })}
@@ -266,7 +266,7 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
                       predictedAwayScore={pred.predicted_away_score}
                       onPredict={handlePredict}
                       saving={saving === match.id}
-                      pointsValue={currentPhase.points_value}
+                      pointsValue={1}
                       isPhaseLocked={isPhaseLocked}
                     />
                   )

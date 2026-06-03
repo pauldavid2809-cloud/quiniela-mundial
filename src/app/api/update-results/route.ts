@@ -52,8 +52,7 @@ export async function POST() {
         .select('points_value')
         .eq('name', dbMatch.phase)
         .single()
-
-      const pointsValue = phase?.points_value || 1
+      const pointsValue = 1
 
       const { data: predictions } = await supabase
         .from('predictions')
