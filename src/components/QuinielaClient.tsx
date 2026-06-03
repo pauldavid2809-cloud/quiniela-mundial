@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
 import MatchCard from './MatchCard'
 
 interface Phase {
@@ -49,6 +50,7 @@ interface Props {
 }
 
 export default function QuinielaClient({ phases, matches, predictions, userId }: Props) {
+  const router = useRouter()
   const [activePhase, setActivePhase] = useState(phases.find(p => p.is_unlocked)?.name || 'groups')
   const [localPredictions, setLocalPredictions] = useState<Record<number, {
     prediction: 'home' | 'draw' | 'away' | null
@@ -121,6 +123,7 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
         .delete()
         .eq('user_id', userId)
         .eq('match_id', matchId)
+      router.refresh()
       setSaving(null)
       return
     }
@@ -158,13 +161,18 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
           predicted_away_score: pred?.predicted_away_score ?? null
         }
       }))
+    } else {
+      router.refresh()
     }
     setSaving(null)
   }
 
   const phaseMatchCount = (phaseName: string) => matches.filter(m => m.phase === phaseName).length
   const phasePredCount = (phaseName: string) =>
-    predictions.filter(p => matches.find(m => m.id === p.match_id && m.phase === phaseName)).length
+    Object.entries(localPredictions).filter(([matchId, pred]) => {
+      const match = matches.find(m => m.id === Number(matchId))
+      return match && match.phase === phaseName && pred.predicted_home_score !== null && pred.predicted_away_score !== null
+    }).length
 
   return (
     <div className="animate-fade-in">
