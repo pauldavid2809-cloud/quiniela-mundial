@@ -30,20 +30,20 @@ interface Props {
 }
 
 function TeamFlag({ url, name }: { url: string; name: string }) {
-  if (url) {
+  if (url && (url.startsWith('http') || url.startsWith('/') || url.includes('.'))) {
     return (
       <img
         src={url}
         alt={name}
-        className="w-8 h-8 object-contain rounded"
+        className="w-6 h-6 object-contain rounded"
         onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
       />
     )
   }
   return (
-    <div className="w-8 h-8 rounded bg-white/10 flex items-center justify-center text-lg">
-      ⚽
-    </div>
+    <span className="text-2xl select-none leading-none shrink-0" title={name}>
+      {url || '🏳️'}
+    </span>
   )
 }
 
