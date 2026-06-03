@@ -210,6 +210,7 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
         {phases.map(phase => {
           const predCount = phasePredCount(phase.name)
           const matchCount = phaseMatchCount(phase.name)
+          const isPhaseLocked = getPhaseLockStatus(phase.name)
           const hasPlaceholders = getPhasePlaceholderStatus(phase.name)
           // Convenient auto-open: accessible if Groups, manually unlocked, or matches loaded, no lock, and no placeholders
           const isPhaseOpen = phase.name === 'groups' || phase.is_unlocked || (matchCount > 0 && !isPhaseLocked && !hasPlaceholders)
