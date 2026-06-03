@@ -60,7 +60,7 @@ export default async function HomePage() {
             <div className="text-left">
               <div className="text-white/40 text-[9px] uppercase tracking-widest font-semibold leading-none mb-1">Una iniciativa de la</div>
               <div className="text-gold-500 font-display text-base font-bold tracking-wide uppercase">Coordinación de Cultura</div>
-              <div className="text-white/80 text-[11px] font-medium leading-none mt-1">Seminario Diocesano</div>
+              <div className="text-white/80 text-[11px] font-medium leading-none mt-1">Seminario Mayor</div>
             </div>
           </div>
 
