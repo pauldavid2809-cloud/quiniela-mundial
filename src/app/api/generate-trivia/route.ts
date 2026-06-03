@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { createAdminClient } from '@/lib/supabase/server'
 
 export async function POST() {
   try {
@@ -7,22 +8,45 @@ export async function POST() {
       return NextResponse.json({ error: 'GROQ_API_KEY no configurada' }, { status: 500 })
     }
 
+    // 1. Obtener las últimas preguntas guardadas para evitar duplicados
+    let previousQuestionsText = ''
+    try {
+      const supabase = createAdminClient()
+      const { data } = await supabase
+        .from('trivia_questions')
+        .select('question')
+        .order('created_at', { ascending: false })
+        .limit(20)
+      
+      if (data && data.length > 0) {
+        previousQuestionsText = data.map(q => `- ${q.question}`).join('\n')
+      }
+    } catch (dbError) {
+      console.error('Error al obtener preguntas previas para evitar duplicados:', dbError)
+    }
+
     const url = 'https://api.groq.com/openai/v1/chat/completions'
 
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [
-          {
-            role: 'user',
-            content: `Genera UNA pregunta de trivia única y exclusivamente relacionada con la historia de la Copa Mundial de la FIFA (Mundiales de fútbol, estadísticas de mundiales, jugadores históricos del mundial, ediciones pasadas, récords del mundial, sedes, selecciones participantes, anécdotas mundialistas, etc.).
+    // Creamos una lista de subtemas aleatorios para inyectar variedad en cada llamada
+    const subtopics = [
+      'Goleadores históricos de los Mundiales (Klose, Ronaldo, Pelé, Fontaine, etc.)',
+      'Ediciones antiguas y curiosidades (Uruguay 1930, Italia 1934, Suiza 1954, etc.)',
+      'Mundiales recientes (Sudáfrica 2010, Brasil 2014, Rusia 2018, Qatar 2022)',
+      'Récords del Mundial (jugador más joven, gol más rápido, más partidos jugados, etc.)',
+      'Tarjetas rojas y amonestaciones famosas, polémicas o partidos con muchos goles',
+      'Sedes históricas, mascotas oficiales del mundial o estadios icónicos',
+      'Países debutantes o hazañas de selecciones revelación (ej. Marruecos 2022, Croacia 2018, Camerún 1990)',
+      'Directores técnicos históricos, campeones múltiples o finales dramáticas'
+    ]
+    const randomSubtopic = subtopics[Math.floor(Math.random() * subtopics.length)]
+
+    const prompt = `Genera UNA pregunta de trivia única y exclusivamente relacionada con la historia de la Copa Mundial de la FIFA.
+
+Para asegurar que sea variada, enfócate preferentemente en este subtema o área: ${randomSubtopic}.
 
 La pregunta debe ser interesante, con dificultad variada (de media a alta), y referirse estrictamente al contexto de los Mundiales de la FIFA. Evita a toda costa preguntas genéricas de fútbol de clubes (como Champions League, Copa Libertadores, ligas europeas, etc.) o jugadores en sus clubes; todo debe estar relacionado con la Copa del Mundo.
+
+${previousQuestionsText ? `IMPORTANTE: Para evitar repeticiones, NO debes generar ninguna pregunta idéntica ni muy similar a las siguientes preguntas que ya existen en la base de datos:\n${previousQuestionsText}` : ''}
 
 Responde ÚNICAMENTE con un objeto JSON válido, sin texto adicional, sin comillas de código, exactamente en este formato:
 {
@@ -35,12 +59,25 @@ Responde ÚNICAMENTE con un objeto JSON válido, sin texto adicional, sin comill
 }
 
 Solo una de las opciones (a, b, c o d) debe ser la correcta. Las otras tres deben ser plausibles pero incorrectas.`
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          {
+            role: 'user',
+            content: prompt
           }
         ],
         response_format: {
           type: 'json_object'
         },
-        temperature: 0.7,
+        temperature: 1.0, // Subimos la temperatura para forzar más creatividad y aleatoriedad
       }),
     })
 
