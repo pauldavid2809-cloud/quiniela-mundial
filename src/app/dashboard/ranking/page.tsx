@@ -12,7 +12,24 @@ export default async function RankingPage() {
     .order('total_points', { ascending: false })
     .limit(50)
 
-  const userRank = ranking?.findIndex(p => p.id === user?.id) ?? -1
+  // Get user's own points and absolute rank
+  let userRank = -1
+  let userProfile: any = null
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id, username, display_name, total_points')
+      .eq('id', user.id)
+      .single()
+    if (profile) {
+      userProfile = profile
+      const { count } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .gt('total_points', profile.total_points)
+      userRank = (count ?? 0) + 1
+    }
+  }
 
   const top3 = ranking ? ranking.slice(0, 3) : []
   const restOfRanking = ranking ? ranking.slice(3) : []
@@ -64,17 +81,17 @@ export default async function RankingPage() {
       </div>
 
       {/* User position card */}
-      {userRank >= 0 && ranking && (
+      {userRank >= 1 && userProfile && (
         <div className="glass-card p-4 border-gold-500/30"
           style={{ borderColor: 'rgba(255,215,0,0.3)' }}>
           <div className="flex items-center gap-4">
-            <div className="font-display text-4xl text-gold-500">#{userRank + 1}</div>
+            <div className="font-display text-4xl text-gold-500">#{userRank}</div>
             <div>
               <div className="text-white/60 text-xs uppercase tracking-wide">Tu posición</div>
-              <div className="text-white font-semibold">{ranking[userRank].display_name || ranking[userRank].username}</div>
+              <div className="text-white font-semibold">{userProfile.display_name || userProfile.username}</div>
             </div>
             <div className="ml-auto text-right">
-              <div className="font-display text-3xl text-gold-500">{ranking[userRank].total_points}</div>
+              <div className="font-display text-3xl text-gold-500">{userProfile.total_points}</div>
               <div className="text-white/40 text-xs">puntos</div>
             </div>
           </div>

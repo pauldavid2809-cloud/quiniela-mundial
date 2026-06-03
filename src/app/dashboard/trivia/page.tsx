@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
 
 interface TriviaQuestion {
   id: number
@@ -33,6 +34,7 @@ const OPTION_COLORS = {
 
 export default function TriviaPage() {
   const supabase = createClient()
+  const router = useRouter()
   const [question, setQuestion] = useState<TriviaQuestion | null>(null)
   const [alreadyAnswered, setAlreadyAnswered] = useState<TriviaAnswer | null>(null)
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null)
@@ -126,9 +128,12 @@ export default function TriviaPage() {
       points_earned: points,
     })
 
-    if (!error && isCorrect) {
-      // Recalculate total points
-      await supabase.rpc('recalculate_user_points', { p_user_id: userId })
+    if (!error) {
+      if (isCorrect) {
+        // Recalculate total points
+        await supabase.rpc('recalculate_user_points', { p_user_id: userId })
+      }
+      router.refresh()
     }
   }
 
