@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { format, parseISO } from 'date-fns'
+import { parseISO } from 'date-fns'
+import { toZonedTime, format as formatTz } from 'date-fns-tz'
 import { es } from 'date-fns/locale'
 
 interface Match {
@@ -63,6 +64,10 @@ export default function MatchCard({
   const isLocked = isPhaseLocked || !isScheduled
 
   const matchDate = match.match_date ? parseISO(match.match_date) : null
+  
+  // Venezuela timezone: America/Caracas (UTC-4)
+  const timeZone = 'America/Caracas'
+  const zonedDate = matchDate ? toZonedTime(matchDate, timeZone) : null
 
   // Local state for exact score inputs
   const [homeInput, setHomeInput] = useState(predictedHomeScore !== null ? String(predictedHomeScore) : '')
@@ -138,7 +143,6 @@ export default function MatchCard({
       if (h !== predictedHomeScore || a !== predictedAwayScore) {
         onPredict(match.id, h, a)
       } else {
-        // If values are already same as props, we are no longer editing
         setIsEditing(false)
       }
     }
@@ -179,17 +183,17 @@ export default function MatchCard({
           {isDone && (
             <span className="badge badge-done">FIN</span>
           )}
-          {isScheduled && matchDate && (
+          {isScheduled && zonedDate && (
             <div className="text-center">
               <div className="text-white/40 text-[9px] uppercase tracking-wider leading-none mb-1">
-                {format(matchDate, 'dd MMM', { locale: es })}
+                {formatTz(zonedDate, 'dd MMM', { locale: es, timeZone })}
               </div>
               <div className="text-white/70 text-xs font-semibold">
-                {format(matchDate, 'HH:mm')}
+                {formatTz(zonedDate, 'HH:mm', { timeZone })}
               </div>
             </div>
           )}
-          {isScheduled && !matchDate && (
+          {isScheduled && !zonedDate && (
             <span className="badge badge-soon">PRÓXIMO</span>
           )}
         </div>
@@ -252,38 +256,55 @@ export default function MatchCard({
 
         <div className="flex items-center gap-3">
           {!isLocked ? (
-            // Edit mode (Inputs)
-            <div className="flex items-center gap-1.5">
-              <input
-                type="number"
-                min="0"
-                placeholder="-"
-                value={homeInput}
-                onChange={e => handleHomeChange(e.target.value)}
-                onBlur={handleBlur}
-                onKeyDown={handleKeyDown}
-                disabled={saving}
-                className="w-10 h-8 text-center bg-white/5 hover:bg-white/10 focus:bg-white/10 text-white font-bold rounded border border-white/10 focus:border-gold-500/50 outline-none text-sm transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              />
+            // Edit mode (Inputs with flags)
+            <div className="flex items-center gap-2">
+              {/* Home input group */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-white/40 font-semibold uppercase hidden sm:block">
+                  {match.home_team.slice(0, 3)}
+                </span>
+                <TeamFlag url={match.home_flag} name={match.home_team} />
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="-"
+                  value={homeInput}
+                  onChange={e => handleHomeChange(e.target.value)}
+                  onBlur={handleBlur}
+                  onKeyDown={handleKeyDown}
+                  disabled={saving}
+                  className="w-10 h-8 text-center bg-white/5 hover:bg-white/10 focus:bg-white/10 text-white font-bold rounded border border-white/10 focus:border-gold-500/50 outline-none text-sm transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+              </div>
+
               <span className="text-white/30 text-xs font-bold">-</span>
-              <input
-                type="number"
-                min="0"
-                placeholder="-"
-                value={awayInput}
-                onChange={e => handleAwayChange(e.target.value)}
-                onBlur={handleBlur}
-                onKeyDown={handleKeyDown}
-                disabled={saving}
-                className="w-10 h-8 text-center bg-white/5 hover:bg-white/10 focus:bg-white/10 text-white font-bold rounded border border-white/10 focus:border-gold-500/50 outline-none text-sm transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              />
+
+              {/* Away input group */}
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="-"
+                  value={awayInput}
+                  onChange={e => handleAwayChange(e.target.value)}
+                  onBlur={handleBlur}
+                  onKeyDown={handleKeyDown}
+                  disabled={saving}
+                  className="w-10 h-8 text-center bg-white/5 hover:bg-white/10 focus:bg-white/10 text-white font-bold rounded border border-white/10 focus:border-gold-500/50 outline-none text-sm transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <TeamFlag url={match.away_flag} name={match.away_team} />
+                <span className="text-[10px] text-white/40 font-semibold uppercase hidden sm:block">
+                  {match.away_team.slice(0, 3)}
+                </span>
+              </div>
               {saving && (
                 <span className="w-4 h-4 border-2 border-gold-500 border-t-transparent rounded-full animate-spin ml-1" />
               )}
             </div>
           ) : (
-            // Locked / Completed display mode
-            <div className="flex items-center gap-2">
+            // Locked / Completed display mode with flags
+            <div className="flex items-center gap-2 bg-black/10 px-2 py-1 rounded border border-white/5">
+              <TeamFlag url={match.home_flag} name={match.home_team} />
               {predictedHomeScore !== null && predictedAwayScore !== null ? (
                 <div className={`font-mono text-sm px-2 py-0.5 rounded font-bold border ${
                   isExactScoreCorrect ? 'bg-amber-950/20 border-amber-500/30 text-amber-300' :
@@ -293,8 +314,9 @@ export default function MatchCard({
                   {predictedHomeScore} - {predictedAwayScore}
                 </div>
               ) : (
-                <span className="text-white/20 text-xs italic">Sin predicción</span>
+                <span className="text-white/20 text-xs italic px-1">Sin predicción</span>
               )}
+              <TeamFlag url={match.away_flag} name={match.away_team} />
             </div>
           )}
 
