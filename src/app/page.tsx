@@ -118,6 +118,88 @@ export default async function HomePage() {
         </div>
       </main>
 
+      {/* Rules Section */}
+      <section className="max-w-7xl mx-auto w-full px-6 py-12 border-t border-white/5 z-10">
+        <div className="text-center mb-8">
+          <h2 className="font-display text-3xl tracking-wide text-white uppercase">REGLAS DEL JUEGO</h2>
+          <p className="text-white/50 text-sm mt-1">Conoce cómo sumar puntos y competir en la Quiniela</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Card 1 */}
+          <div className="glass-card p-6 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-xl">⚽</span>
+                <h3 className="font-display text-xl font-bold tracking-wide">1. PUNTOS POR FASE</h3>
+              </div>
+              <p className="text-white/50 text-xs leading-relaxed mb-4">
+                Por acertar al ganador (o empate) de un partido, recibirás los puntos base asignados a la fase correspondiente:
+              </p>
+              <ul className="space-y-1.5 text-xs text-white/70">
+                <li className="flex justify-between border-b border-white/5 pb-1">
+                  <span>Fase de Grupos:</span> <span className="text-gold-500 font-bold">1 punto</span>
+                </li>
+                <li className="flex justify-between border-b border-white/5 pb-1">
+                  <span>32avos de Final:</span> <span className="text-gold-500 font-bold">2 puntos</span>
+                </li>
+                <li className="flex justify-between border-b border-white/5 pb-1">
+                  <span>Octavos de Final:</span> <span className="text-gold-500 font-bold">3 puntos</span>
+                </li>
+                <li className="flex justify-between border-b border-white/5 pb-1">
+                  <span>Cuartos de Final:</span> <span className="text-gold-500 font-bold">4 puntos</span>
+                </li>
+                <li className="flex justify-between border-b border-white/5 pb-1">
+                  <span>Semifinales:</span> <span className="text-gold-500 font-bold">5 puntos</span>
+                </li>
+                <li className="flex justify-between pb-1">
+                  <span>Gran Final:</span> <span className="text-gold-500 font-bold">6 puntos</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Card 2 */}
+          <div className="glass-card p-6 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-xl">🎯</span>
+                <h3 className="font-display text-xl font-bold tracking-wide text-amber-500">2. BONO DE MARCADOR</h3>
+              </div>
+              <p className="text-white/50 text-xs leading-relaxed mb-4">
+                Si además de acertar al ganador, predices el **marcador exacto de goles** de ambos equipos en el partido, recibirás una bonificación:
+              </p>
+              <div className="bg-amber-950/20 border border-amber-500/30 p-3 rounded-lg text-center mb-4">
+                <span className="font-display text-3xl font-bold text-amber-400">+2 PUNTOS EXTRA</span>
+                <span className="block text-[10px] text-white/50 mt-1">Sumados sobre los puntos base de la fase</span>
+              </div>
+              <p className="text-white/40 text-[10px] italic">
+                Ejemplo: Aciertas el marcador exacto en Octavos (3 pts base + 2 pts bono = 5 pts en total).
+              </p>
+            </div>
+          </div>
+
+          {/* Card 3 */}
+          <div className="glass-card p-6 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-xl">🧠</span>
+                <h3 className="font-display text-xl font-bold tracking-wide">3. TRIVIA & BLOQUEOS</h3>
+              </div>
+              <p className="text-white/50 text-xs leading-relaxed mb-3">
+                <strong className="text-white">Trivia Diaria:</strong> Cada día tendrás una pregunta única de IA sobre la historia de los mundiales. Tienes 10 segundos para responder.
+              </p>
+              <div className="bg-white/5 p-2 rounded text-center text-xs font-semibold text-gold-500 mb-4">
+                Pregunta correcta = 1 punto
+              </div>
+              <p className="text-white/50 text-xs leading-relaxed">
+                <strong className="text-white">Bloqueo de Grupos:</strong> Las predicciones de la Fase de Grupos se cierran y bloquean en su totalidad el **11 de junio de 2026** (inicio del partido inaugural).
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="p-6 text-center border-t border-white/5 bg-black/20 text-white/40 text-xs z-10 flex flex-col sm:flex-row items-center justify-between max-w-7xl mx-auto w-full gap-3">
         <div>
