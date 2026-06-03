@@ -116,7 +116,7 @@ export default function TriviaPage() {
     setRevealed(true)
 
     const isCorrect = answer === question.correct_answer
-    const points = isCorrect ? 3 : 0
+    const points = isCorrect ? 1 : 0
 
     const { error } = await supabase.from('trivia_answers').insert({
       user_id: userId,
@@ -185,7 +185,7 @@ export default function TriviaPage() {
       <div className="mb-6">
         <h1 className="font-display text-4xl gold-shimmer">TRIVIA MUNDIAL</h1>
         <p className="text-white/50 text-sm mt-1">
-          Una pregunta por día · 10 segundos · Hasta 3 puntos
+          Una pregunta por día · 10 segundos · 1 punto
         </p>
       </div>
 
@@ -212,7 +212,7 @@ export default function TriviaPage() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="badge" style={{ background: 'rgba(255,215,0,0.15)', border: '1px solid rgba(255,215,0,0.3)', color: '#FFD700' }}>
-                  +3 pts
+                  +1 pt
                 </span>
                 {!revealed && (
                   <span
@@ -290,7 +290,7 @@ export default function TriviaPage() {
                 <>
                   <div className="text-4xl mb-2">🎉</div>
                   <div className="font-display text-2xl text-green-400 mb-1">¡CORRECTO!</div>
-                  <div className="text-white/60">Sumaste <span className="text-gold-500 font-bold">+3 puntos</span> al ranking</div>
+                  <div className="text-white/60">Sumaste <span className="text-gold-500 font-bold">+1 punto</span> al ranking</div>
                 </>
               ) : timeLeft === 0 && !selectedAnswer ? (
                 <>

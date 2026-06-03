@@ -102,6 +102,8 @@ CREATE TABLE IF NOT EXISTS public.predictions (
   user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   match_id INTEGER NOT NULL REFERENCES public.matches(id) ON DELETE CASCADE,
   prediction TEXT NOT NULL CHECK (prediction IN ('home', 'draw', 'away')),
+  predicted_home_score INTEGER,
+  predicted_away_score INTEGER,
   is_correct BOOLEAN,
   points_earned INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW(),

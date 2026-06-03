@@ -1,6 +1,6 @@
 'use client'
 
-import Image from 'next/image'
+import { useState, useEffect } from 'react'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 
@@ -19,10 +19,13 @@ interface Match {
 
 interface Props {
   match: Match
-  prediction?: 'home' | 'draw' | 'away'
-  onPredict: (matchId: number, pred: 'home' | 'draw' | 'away') => void
+  prediction?: 'home' | 'draw' | 'away' | null
+  predictedHomeScore: number | null
+  predictedAwayScore: number | null
+  onPredict: (matchId: number, homeScore: number | null, awayScore: number | null) => void
   saving: boolean
   pointsValue: number
+  isPhaseLocked?: boolean
 }
 
 function TeamFlag({ url, name }: { url: string; name: string }) {
@@ -43,12 +46,62 @@ function TeamFlag({ url, name }: { url: string; name: string }) {
   )
 }
 
-export default function MatchCard({ match, prediction, onPredict, saving, pointsValue }: Props) {
+export default function MatchCard({
+  match,
+  prediction,
+  predictedHomeScore,
+  predictedAwayScore,
+  onPredict,
+  saving,
+  pointsValue,
+  isPhaseLocked = false
+}: Props) {
   const isScheduled = match.status === 'scheduled'
   const isLive = match.status === 'live'
   const isDone = match.status === 'completed'
 
+  const isLocked = isPhaseLocked || !isScheduled
+
   const matchDate = match.match_date ? parseISO(match.match_date) : null
+
+  // Local state for exact score inputs
+  const [homeInput, setHomeInput] = useState(predictedHomeScore !== null ? String(predictedHomeScore) : '')
+  const [awayInput, setAwayInput] = useState(predictedAwayScore !== null ? String(predictedAwayScore) : '')
+
+  useEffect(() => {
+    setHomeInput(predictedHomeScore !== null ? String(predictedHomeScore) : '')
+  }, [predictedHomeScore])
+
+  useEffect(() => {
+    setAwayInput(predictedAwayScore !== null ? String(predictedAwayScore) : '')
+  }, [predictedAwayScore])
+
+  const handleBlur = () => {
+    submitPrediction()
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      submitPrediction()
+    }
+  }
+
+  const submitPrediction = () => {
+    const hVal = homeInput.trim()
+    const aVal = awayInput.trim()
+
+    if (hVal === '' && aVal === '') {
+      onPredict(match.id, null, null)
+      return
+    }
+
+    const h = parseInt(hVal, 10)
+    const a = parseInt(aVal, 10)
+
+    if (!isNaN(h) && !isNaN(a)) {
+      onPredict(match.id, h, a)
+    }
+  }
 
   const result: 'home' | 'draw' | 'away' | null = isDone && match.home_score !== null && match.away_score !== null
     ? match.home_score > match.away_score ? 'home'
@@ -56,22 +109,38 @@ export default function MatchCard({ match, prediction, onPredict, saving, points
       : 'draw'
     : null
 
-  const isCorrect = isDone && prediction && result ? prediction === result : null
+  const isWinnerCorrect = isDone && prediction && result ? prediction === result : null
+  const isExactScoreCorrect = isDone && 
+    predictedHomeScore !== null && 
+    predictedAwayScore !== null && 
+    predictedHomeScore === match.home_score && 
+    predictedAwayScore === match.away_score
+
+  const earnedPoints = isExactScoreCorrect ? pointsValue + 2 : isWinnerCorrect ? pointsValue : 0
 
   return (
-    <div className={`glass-card p-4 transition-all ${isLive ? 'border-crimson-500/40' : ''} ${isCorrect === true ? 'border-green-500/40' : isCorrect === false ? 'border-red-500/30' : ''}`}>
+    <div className={`glass-card p-4 transition-all relative overflow-hidden ${isLive ? 'border-crimson-500/40' : ''} ${
+      isExactScoreCorrect ? 'border-amber-500/50 shadow-lg shadow-amber-500/5' :
+      isWinnerCorrect === true ? 'border-green-500/40' : 
+      isWinnerCorrect === false ? 'border-red-500/30' : ''
+    }`}>
+      {/* Background glow for exact match winner */}
+      {isExactScoreCorrect && (
+        <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
+      )}
+
       <div className="flex items-center gap-3">
         {/* Status badge */}
-        <div className="flex flex-col items-center gap-1 min-w-[52px]">
+        <div className="flex flex-col items-center gap-1 min-w-[56px]">
           {isLive && (
-            <span className="badge badge-live">EN VIVO</span>
+            <span className="badge badge-live animate-pulse">VIVO</span>
           )}
           {isDone && (
             <span className="badge badge-done">FIN</span>
           )}
           {isScheduled && matchDate && (
             <div className="text-center">
-              <div className="text-white/50 text-[10px] leading-none">
+              <div className="text-white/40 text-[9px] uppercase tracking-wider leading-none mb-1">
                 {format(matchDate, 'dd MMM', { locale: es })}
               </div>
               <div className="text-white/70 text-xs font-semibold">
@@ -97,10 +166,10 @@ export default function MatchCard({ match, prediction, onPredict, saving, points
             <TeamFlag url={match.home_flag} name={match.home_team} />
           </div>
 
-          {/* Score / VS */}
-          <div className="text-center min-w-[52px]">
+          {/* Actual score / VS */}
+          <div className="text-center min-w-[64px]">
             {(isLive || isDone) && match.home_score !== null ? (
-              <div className="font-display text-2xl text-white tracking-wide">
+              <div className="font-display text-2xl text-white tracking-wide bg-black/25 px-2 py-0.5 rounded border border-white/5">
                 {match.home_score} - {match.away_score}
               </div>
             ) : (
@@ -120,74 +189,92 @@ export default function MatchCard({ match, prediction, onPredict, saving, points
           </div>
         </div>
 
-        {/* Result indicator */}
-        {isCorrect !== null && (
-          <div className={`text-xl ${isCorrect ? 'text-green-400' : 'text-red-400'}`}>
-            {isCorrect ? '✅' : '❌'}
+        {/* Result status icon */}
+        {isDone && (
+          <div className="shrink-0 flex items-center justify-center">
+            {isExactScoreCorrect ? (
+              <span className="text-xl" title="¡Marcador Exacto! 🎯">🎯</span>
+            ) : isWinnerCorrect ? (
+              <span className="text-xl" title="Acertado general">✅</span>
+            ) : (
+              <span className="text-xl" title="No acertado">❌</span>
+            )}
           </div>
         )}
       </div>
 
-      {/* Prediction buttons */}
-      <div className="mt-3 pt-3 border-t border-white/8">
-        {isScheduled ? (
-          <div className="flex gap-2">
-            <button
-              className={`pred-btn pred-btn-home ${prediction === 'home' ? 'selected' : ''}`}
-              onClick={() => onPredict(match.id, 'home')}
-              disabled={saving}
-            >
-              {saving && prediction === 'home' ? '...' : `🏠 ${match.home_team.slice(0, 8)}`}
-            </button>
-            <button
-              className={`pred-btn pred-btn-draw ${prediction === 'draw' ? 'selected' : ''}`}
-              onClick={() => onPredict(match.id, 'draw')}
-              disabled={saving}
-            >
-              {saving && prediction === 'draw' ? '...' : '🤝 EMPATE'}
-            </button>
-            <button
-              className={`pred-btn pred-btn-away ${prediction === 'away' ? 'selected' : ''}`}
-              onClick={() => onPredict(match.id, 'away')}
-              disabled={saving}
-            >
-              {saving && prediction === 'away' ? '...' : `✈️ ${match.away_team.slice(0, 8)}`}
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between">
-            <div className="flex gap-2">
-              {(['home', 'draw', 'away'] as const).map(opt => (
-                <div
-                  key={opt}
-                  className={`pred-btn text-center text-xs px-2 py-1.5 rounded
-                    ${prediction === opt
-                      ? result === opt
-                        ? 'answer-correct'
-                        : isDone ? 'answer-wrong' : 'pred-btn-' + opt + ' selected'
-                      : 'opacity-30'
-                    }
-                    ${result === opt && prediction !== opt ? 'opacity-100 answer-correct' : ''}
-                  `}
-                >
-                  {opt === 'home' ? match.home_team.slice(0, 6) : opt === 'away' ? match.away_team.slice(0, 6) : 'EMPATE'}
-                  {result === opt && <span className="ml-1">✓</span>}
-                </div>
-              ))}
+      {/* Prediction inputs */}
+      <div className="mt-3 pt-3 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="text-white/40 text-xs font-semibold uppercase tracking-wider">
+          Mi Predicción:
+        </div>
+
+        <div className="flex items-center gap-3">
+          {!isLocked ? (
+            // Edit mode (Inputs)
+            <div className="flex items-center gap-1.5">
+              <input
+                type="number"
+                min="0"
+                placeholder="-"
+                value={homeInput}
+                onChange={e => setHomeInput(e.target.value)}
+                onBlur={handleBlur}
+                onKeyDown={handleKeyDown}
+                disabled={saving}
+                className="w-10 h-8 text-center bg-white/5 hover:bg-white/10 focus:bg-white/10 text-white font-bold rounded border border-white/10 focus:border-gold-500/50 outline-none text-sm transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+              <span className="text-white/30 text-xs font-bold">-</span>
+              <input
+                type="number"
+                min="0"
+                placeholder="-"
+                value={awayInput}
+                onChange={e => setAwayInput(e.target.value)}
+                onBlur={handleBlur}
+                onKeyDown={handleKeyDown}
+                disabled={saving}
+                className="w-10 h-8 text-center bg-white/5 hover:bg-white/10 focus:bg-white/10 text-white font-bold rounded border border-white/10 focus:border-gold-500/50 outline-none text-sm transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+              {saving && (
+                <span className="w-4 h-4 border-2 border-gold-500 border-t-transparent rounded-full animate-spin ml-1" />
+              )}
             </div>
-            {prediction && result && prediction === result && (
-              <span className="text-gold-500 font-display text-sm">+{pointsValue} pt</span>
-            )}
-            {!prediction && isDone && (
-              <span className="text-white/30 text-xs">Sin predicción</span>
-            )}
-          </div>
-        )}
+          ) : (
+            // Locked / Completed display mode
+            <div className="flex items-center gap-2">
+              {predictedHomeScore !== null && predictedAwayScore !== null ? (
+                <div className={`font-mono text-sm px-2 py-0.5 rounded font-bold border ${
+                  isExactScoreCorrect ? 'bg-amber-950/20 border-amber-500/30 text-amber-300' :
+                  isWinnerCorrect ? 'bg-green-950/20 border-green-500/30 text-green-300' :
+                  isDone ? 'bg-red-950/10 border-red-500/20 text-red-300' : 'bg-white/5 border-white/10 text-white'
+                }`}>
+                  {predictedHomeScore} - {predictedAwayScore}
+                </div>
+              ) : (
+                <span className="text-white/20 text-xs italic">Sin predicción</span>
+              )}
+            </div>
+          )}
+
+          {/* Points indicator */}
+          {isDone && (
+            <div className="shrink-0">
+              {earnedPoints > 0 ? (
+                <span className={`font-display text-sm font-semibold ${isExactScoreCorrect ? 'text-amber-400' : 'text-green-400'}`}>
+                  +{earnedPoints} pt
+                </span>
+              ) : (
+                <span className="text-white/25 text-xs">0 pt</span>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Venue */}
+      {/* Match details (Venue) */}
       {match.venue && (
-        <div className="mt-2 text-white/25 text-[10px] text-right">📍 {match.venue}</div>
+        <div className="mt-2 text-white/20 text-[9px] text-right font-medium">📍 {match.venue}</div>
       )}
     </div>
   )

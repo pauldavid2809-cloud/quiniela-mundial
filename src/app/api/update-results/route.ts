@@ -57,18 +57,30 @@ export async function POST() {
 
       const { data: predictions } = await supabase
         .from('predictions')
-        .select('id, user_id, prediction')
+        .select('id, user_id, prediction, predicted_home_score, predicted_away_score')
         .eq('match_id', dbMatch.id)
         .is('is_correct', null)
 
       if (predictions) {
         for (const pred of predictions) {
           const isCorrect = pred.prediction === result
+          
+          // Exact score prediction bonus of +2 points
+          const isExactScore = isCorrect && 
+            pred.predicted_home_score !== null && 
+            pred.predicted_away_score !== null && 
+            pred.predicted_home_score === match.home_score && 
+            pred.predicted_away_score === match.away_score
+            
+          const pointsEarned = isCorrect 
+            ? (pointsValue + (isExactScore ? 2 : 0)) 
+            : 0
+
           await supabase
             .from('predictions')
             .update({
               is_correct: isCorrect,
-              points_earned: isCorrect ? pointsValue : 0,
+              points_earned: pointsEarned,
             })
             .eq('id', pred.id)
 

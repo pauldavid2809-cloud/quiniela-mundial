@@ -1,6 +1,8 @@
 'use client'
 
-import { useState, useOptimistic, useTransition } from 'react'
+import { useState } from 'react'
+import { format, parseISO } from 'date-fns'
+import { es } from 'date-fns/locale'
 import { createClient } from '@/lib/supabase/client'
 import MatchCard from './MatchCard'
 
@@ -33,6 +35,8 @@ interface Prediction {
   id: number
   match_id: number
   prediction: 'home' | 'draw' | 'away'
+  predicted_home_score: number | null
+  predicted_away_score: number | null
   is_correct: boolean | null
   points_earned: number
 }
@@ -46,8 +50,19 @@ interface Props {
 
 export default function QuinielaClient({ phases, matches, predictions, userId }: Props) {
   const [activePhase, setActivePhase] = useState(phases.find(p => p.is_unlocked)?.name || 'groups')
-  const [localPredictions, setLocalPredictions] = useState<Record<number, 'home' | 'draw' | 'away'>>(
-    Object.fromEntries(predictions.map(p => [p.match_id, p.prediction]))
+  const [localPredictions, setLocalPredictions] = useState<Record<number, {
+    prediction: 'home' | 'draw' | 'away' | null
+    predicted_home_score: number | null
+    predicted_away_score: number | null
+  }>>(
+    Object.fromEntries(matches.map(m => {
+      const pred = predictions.find(p => p.match_id === m.id)
+      return [m.id, {
+        prediction: pred?.prediction || null,
+        predicted_home_score: pred?.predicted_home_score ?? null,
+        predicted_away_score: pred?.predicted_away_score ?? null
+      }]
+    }))
   )
   const [saving, setSaving] = useState<number | null>(null)
   const supabase = createClient()
@@ -55,38 +70,82 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
   const currentPhase = phases.find(p => p.name === activePhase)
   const phaseMatches = matches.filter(m => m.phase === activePhase)
 
-  // Group by group_name for group stage
-  const grouped = activePhase === 'groups'
-    ? phaseMatches.reduce((acc, m) => {
-        const key = m.group_name || 'Sin grupo'
-        if (!acc[key]) acc[key] = []
-        acc[key].push(m)
-        return acc
-      }, {} as Record<string, Match[]>)
-    : null
+  // Check if group stage is locked (June 11, 2026 19:00 UTC matches begin)
+  const isGroupStageLocked = new Date() >= new Date('2026-06-11T19:00:00Z')
 
-  const handlePredict = async (matchId: number, prediction: 'home' | 'draw' | 'away') => {
+  // Group by day for visual separation
+  const groupedByDay = phaseMatches.reduce((acc, m) => {
+    if (!m.match_date) return acc
+    const dateStr = m.match_date.split('T')[0]
+    if (!acc[dateStr]) {
+      acc[dateStr] = {
+        dateLabel: format(parseISO(m.match_date), "EEEE d 'de' MMMM", { locale: es }),
+        matches: []
+      }
+    }
+    acc[dateStr].matches.push(m)
+    return acc
+  }, {} as Record<string, { dateLabel: string; matches: Match[] }>)
+
+  const sortedDays = Object.entries(groupedByDay).sort((a, b) => a[0].localeCompare(b[0]))
+
+  const handlePredict = async (matchId: number, homeScore: number | null, awayScore: number | null) => {
     const match = matches.find(m => m.id === matchId)
-    if (!match || match.status !== 'scheduled') return
+    if (!match) return
+    
+    // Check lock status
+    const isLocked = match.status !== 'scheduled' || (match.phase === 'groups' && isGroupStageLocked)
+    if (isLocked) return
 
     setSaving(matchId)
-    setLocalPredictions(prev => ({ ...prev, [matchId]: prediction }))
+
+    if (homeScore === null || awayScore === null) {
+      // Clear prediction if scores are deleted/empty
+      setLocalPredictions(prev => ({
+        ...prev,
+        [matchId]: { prediction: null, predicted_home_score: null, predicted_away_score: null }
+      }))
+      await supabase
+        .from('predictions')
+        .delete()
+        .eq('user_id', userId)
+        .eq('match_id', matchId)
+      setSaving(null)
+      return
+    }
+
+    const prediction = homeScore > awayScore ? 'home' : awayScore > homeScore ? 'away' : 'draw'
+
+    setLocalPredictions(prev => ({
+      ...prev,
+      [matchId]: { prediction, predicted_home_score: homeScore, predicted_away_score: awayScore }
+    }))
 
     const { error } = await supabase
       .from('predictions')
       .upsert(
-        { user_id: userId, match_id: matchId, prediction },
+        { 
+          user_id: userId, 
+          match_id: matchId, 
+          prediction,
+          predicted_home_score: homeScore,
+          predicted_away_score: awayScore
+        },
         { onConflict: 'user_id,match_id' }
       )
 
     if (error) {
       console.error(error)
       // revert on error
-      setLocalPredictions(prev => {
-        const copy = { ...prev }
-        delete copy[matchId]
-        return copy
-      })
+      const pred = predictions.find(p => p.match_id === matchId)
+      setLocalPredictions(prev => ({
+        ...prev,
+        [matchId]: {
+          prediction: pred?.prediction || null,
+          predicted_home_score: pred?.predicted_home_score ?? null,
+          predicted_away_score: pred?.predicted_away_score ?? null
+        }
+      }))
     }
     setSaving(null)
   }
@@ -103,7 +162,7 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
           <span className="gold-shimmer">QUINIELA</span>
         </h1>
         <p className="text-white/50 text-sm mt-1">
-          Predice los resultados y acumula puntos. ¡Que gane el mejor!
+          Predice los marcadores exactos. ¡Acierto del ganador = puntos base, acierto del marcador exacto = <span className="text-gold-500 font-bold">+2 puntos extra</span>!
         </p>
       </div>
 
@@ -134,6 +193,14 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
         })}
       </div>
 
+      {/* Group stage lock info banner */}
+      {activePhase === 'groups' && isGroupStageLocked && (
+        <div className="mb-4 p-3 bg-red-950/30 border border-red-500/30 text-red-300 text-sm rounded-lg flex items-center gap-2">
+          <span>🔒</span>
+          <span>La Fase de Grupos se encuentra **CERRADA**. El torneo ya ha comenzado y no se permiten más predicciones.</span>
+        </div>
+      )}
+
       {/* Phase locked message */}
       {!currentPhase?.is_unlocked ? (
         <div className="glass-card p-12 text-center">
@@ -151,45 +218,40 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
             Los partidos de esta fase se agregarán pronto.
           </p>
         </div>
-      ) : activePhase === 'groups' && grouped ? (
-        // Group stage - organized by group
-        <div className="space-y-6">
-          {Object.entries(grouped).sort().map(([groupName, groupMatches], idx) => (
-            <div key={groupName} className={`animate-slide-up stagger-${Math.min(idx + 1, 5)}`}>
-              <div className="flex items-center gap-3 mb-3">
-                <div className="h-px flex-1 bg-gradient-to-r from-gold-500/30 to-transparent" />
-                <span className="font-display text-lg text-gold-500 tracking-widest px-3">
-                  {groupName}
-                </span>
-                <div className="h-px flex-1 bg-gradient-to-l from-gold-500/30 to-transparent" />
-              </div>
-              <div className="space-y-3">
-                {groupMatches.map(match => (
-                  <MatchCard
-                    key={match.id}
-                    match={match}
-                    prediction={localPredictions[match.id]}
-                    onPredict={handlePredict}
-                    saving={saving === match.id}
-                    pointsValue={currentPhase.points_value}
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
       ) : (
-        // Knockout stage
-        <div className="space-y-3">
-          {phaseMatches.map((match, idx) => (
-            <div key={match.id} className={`animate-slide-up stagger-${Math.min(idx + 1, 5)}`}>
-              <MatchCard
-                match={match}
-                prediction={localPredictions[match.id]}
-                onPredict={handlePredict}
-                saving={saving === match.id}
-                pointsValue={currentPhase.points_value}
-              />
+        // Render matches grouped by day
+        <div className="space-y-8">
+          {sortedDays.map(([dateStr, dayData], idx) => (
+            <div key={dateStr} className={`animate-slide-up stagger-${Math.min(idx + 1, 5)}`}>
+              <div className="flex items-center gap-3 mb-4">
+                <span className="font-display text-xs text-gold-500 uppercase tracking-widest bg-gold-950/20 border border-gold-500/25 px-3 py-1 rounded-full capitalize">
+                  📅 {dayData.dateLabel}
+                </span>
+                <div className="h-px flex-1 bg-gradient-to-r from-gold-500/20 to-transparent" />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {dayData.matches.map(match => {
+                  const pred = localPredictions[match.id] || {
+                    prediction: null,
+                    predicted_home_score: null,
+                    predicted_away_score: null
+                  }
+                  
+                  return (
+                    <MatchCard
+                      key={match.id}
+                      match={match}
+                      prediction={pred.prediction}
+                      predictedHomeScore={pred.predicted_home_score}
+                      predictedAwayScore={pred.predicted_away_score}
+                      onPredict={handlePredict}
+                      saving={saving === match.id}
+                      pointsValue={currentPhase.points_value}
+                      isPhaseLocked={match.phase === 'groups' && isGroupStageLocked}
+                    />
+                  )
+                })}
+              </div>
             </div>
           ))}
         </div>

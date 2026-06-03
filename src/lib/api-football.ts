@@ -54,6 +54,72 @@ const FLAG_MAP: Record<string, string> = {
   'Jamaica': '🇯🇲', 'Haiti': '🇭🇹',
 }
 
+const TEAM_TRANSLATION: Record<string, string> = {
+  'Mexico': 'México',
+  'South Africa': 'Sudáfrica',
+  'South Korea': 'Corea del Sur',
+  'Czech Republic': 'República Checa',
+  'Brazil': 'Brasil',
+  'Argentina': 'Argentina',
+  'France': 'Francia',
+  'Germany': 'Alemania',
+  'Spain': 'España',
+  'England': 'Inglaterra',
+  'Portugal': 'Portugal',
+  'Netherlands': 'Países Bajos',
+  'Belgium': 'Bélgica',
+  'Uruguay': 'Uruguay',
+  'Colombia': 'Colombia',
+  'Japan': 'Japón',
+  'Morocco': 'Marruecos',
+  'Senegal': 'Senegal',
+  'Nigeria': 'Nigeria',
+  'Cameroon': 'Camerún',
+  'Ghana': 'Ghana',
+  'Egypt': 'Egipto',
+  'Saudi Arabia': 'Arabia Saudita',
+  'Iran': 'Irán',
+  'Australia': 'Australia',
+  'USA': 'EE. UU.',
+  'Canada': 'Canadá',
+  'Ecuador': 'Ecuador',
+  'Peru': 'Perú',
+  'Chile': 'Chile',
+  'Venezuela': 'Venezuela',
+  'Switzerland': 'Suiza',
+  'Croatia': 'Croacia',
+  'Serbia': 'Serbia',
+  'Denmark': 'Dinamarca',
+  'Poland': 'Polonia',
+  'Ukraine': 'Ucrania',
+  'Turkey': 'Turquía',
+  'Austria': 'Austria',
+  'Sweden': 'Suecia',
+  'Hungary': 'Hungría',
+  'Romania': 'Rumania',
+  'Slovakia': 'Eslovaquia',
+  'Slovenia': 'Eslovenia',
+  'Albania': 'Albania',
+  'Qatar': 'Catar',
+  'Tunisia': 'Túnez',
+  'Côte d\'Ivoire': 'Costa de Marfil',
+  'Mali': 'Mali',
+  'Guinea': 'Guinea',
+  'DR Congo': 'RD Congo',
+  'Iraq': 'Irak',
+  'Uzbekistan': 'Uzbekistán',
+  'New Zealand': 'Nueva Zelanda',
+  'Panama': 'Panamá',
+  'Honduras': 'Honduras',
+  'Costa Rica': 'Costa Rica',
+  'Jamaica': 'Jamaica',
+  'Haiti': 'Haití',
+}
+
+function translateTeam(teamName: string): string {
+  return TEAM_TRANSLATION[teamName] || teamName
+}
+
 function getFlag(teamName: string): string {
   return FLAG_MAP[teamName] || '🏳️'
 }
@@ -146,8 +212,8 @@ export function transformOpenMatch(match: OpenMatch, roundName: string) {
 
   return {
     api_id: match.num || Math.floor(Math.random() * 100000),
-    home_team: match.team1,
-    away_team: match.team2,
+    home_team: translateTeam(match.team1),
+    away_team: translateTeam(match.team2),
     home_flag: getFlag(match.team1),
     away_flag: getFlag(match.team2),
     phase,
