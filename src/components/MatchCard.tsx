@@ -67,14 +67,45 @@ export default function MatchCard({
   // Local state for exact score inputs
   const [homeInput, setHomeInput] = useState(predictedHomeScore !== null ? String(predictedHomeScore) : '')
   const [awayInput, setAwayInput] = useState(predictedAwayScore !== null ? String(predictedAwayScore) : '')
+  
+  // Track if user is currently editing inputs to prevent overwrite from props
+  const [isEditing, setIsEditing] = useState(false)
+
+  // Sync inputs with props only if the user is not actively editing
+  useEffect(() => {
+    if (!isEditing) {
+      setHomeInput(predictedHomeScore !== null ? String(predictedHomeScore) : '')
+    }
+  }, [predictedHomeScore, isEditing])
 
   useEffect(() => {
-    setHomeInput(predictedHomeScore !== null ? String(predictedHomeScore) : '')
-  }, [predictedHomeScore])
+    if (!isEditing) {
+      setAwayInput(predictedAwayScore !== null ? String(predictedAwayScore) : '')
+    }
+  }, [predictedAwayScore, isEditing])
 
+  // Reset editing state once the saved props change to match the inputs
   useEffect(() => {
-    setAwayInput(predictedAwayScore !== null ? String(predictedAwayScore) : '')
-  }, [predictedAwayScore])
+    if (predictedHomeScore !== null && predictedAwayScore !== null) {
+      if (String(predictedHomeScore) === homeInput.trim() && String(predictedAwayScore) === awayInput.trim()) {
+        setIsEditing(false)
+      }
+    } else if (predictedHomeScore === null && predictedAwayScore === null) {
+      if (homeInput === '' && awayInput === '') {
+        setIsEditing(false)
+      }
+    }
+  }, [predictedHomeScore, predictedAwayScore])
+
+  const handleHomeChange = (val: string) => {
+    setIsEditing(true)
+    setHomeInput(val)
+  }
+
+  const handleAwayChange = (val: string) => {
+    setIsEditing(true)
+    setAwayInput(val)
+  }
 
   const handleBlur = () => {
     submitPrediction()
@@ -90,16 +121,26 @@ export default function MatchCard({
     const hVal = homeInput.trim()
     const aVal = awayInput.trim()
 
+    // If both are empty, delete prediction
     if (hVal === '' && aVal === '') {
-      onPredict(match.id, null, null)
+      if (predictedHomeScore !== null || predictedAwayScore !== null) {
+        setIsEditing(false)
+        onPredict(match.id, null, null)
+      }
       return
     }
 
     const h = parseInt(hVal, 10)
     const a = parseInt(aVal, 10)
 
+    // Save only if both inputs are valid numbers
     if (!isNaN(h) && !isNaN(a)) {
-      onPredict(match.id, h, a)
+      if (h !== predictedHomeScore || a !== predictedAwayScore) {
+        onPredict(match.id, h, a)
+      } else {
+        // If values are already same as props, we are no longer editing
+        setIsEditing(false)
+      }
     }
   }
 
@@ -218,7 +259,7 @@ export default function MatchCard({
                 min="0"
                 placeholder="-"
                 value={homeInput}
-                onChange={e => setHomeInput(e.target.value)}
+                onChange={e => handleHomeChange(e.target.value)}
                 onBlur={handleBlur}
                 onKeyDown={handleKeyDown}
                 disabled={saving}
@@ -230,7 +271,7 @@ export default function MatchCard({
                 min="0"
                 placeholder="-"
                 value={awayInput}
-                onChange={e => setAwayInput(e.target.value)}
+                onChange={e => handleAwayChange(e.target.value)}
                 onBlur={handleBlur}
                 onKeyDown={handleKeyDown}
                 disabled={saving}
