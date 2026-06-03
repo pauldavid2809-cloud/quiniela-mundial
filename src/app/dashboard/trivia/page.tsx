@@ -128,7 +128,15 @@ export default function TriviaPage() {
       points_earned: points,
     })
 
-    if (!error) {
+    if (error) {
+      console.error("Error al guardar respuesta de trivia:", error)
+      alert("Error al guardar tu respuesta: " + error.message)
+    } else {
+      // Fallback manual: En caso de que no se hayan creado los Triggers en Supabase todavía,
+      // ejecutamos el cálculo manual para garantizar que el puntaje se actualice de inmediato.
+      if (isCorrect) {
+        await supabase.rpc('recalculate_user_points', { p_user_id: userId })
+      }
       router.refresh()
     }
   }
