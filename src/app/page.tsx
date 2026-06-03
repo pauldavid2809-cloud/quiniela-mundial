@@ -131,18 +131,31 @@ export default async function HomePage() {
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <span className="text-xl">⚽</span>
-                <h3 className="font-display text-xl font-bold tracking-wide">1. PUNTOS POR GANADOR</h3>
+                <h3 className="font-display text-xl font-bold tracking-wide">1. PUNTOS POR FASE</h3>
               </div>
               <p className="text-white/50 text-xs leading-relaxed mb-4">
-                Por acertar al ganador (o el empate) de cualquier partido en cualquier fase del torneo:
+                Por acertar al ganador (o empate) de un partido, recibirás los puntos base asignados a la fase correspondiente:
               </p>
-              <div className="bg-white/5 border border-white/10 p-3 rounded-lg text-center mb-4">
-                <span className="font-display text-3xl font-bold text-white">1 PUNTO</span>
-                <span className="block text-[10px] text-white/50 mt-1">Por acierto de ganador/empate</span>
-              </div>
-              <p className="text-white/40 text-[10px] italic">
-                Aplica a la fase de grupos y a todas las fases de eliminación directa.
-              </p>
+              <ul className="space-y-1.5 text-xs text-white/70">
+                <li className="flex justify-between border-b border-white/5 pb-1">
+                  <span>Fase de Grupos:</span> <span className="text-gold-500 font-bold">1 punto</span>
+                </li>
+                <li className="flex justify-between border-b border-white/5 pb-1">
+                  <span>32avos de Final:</span> <span className="text-gold-500 font-bold">2 puntos</span>
+                </li>
+                <li className="flex justify-between border-b border-white/5 pb-1">
+                  <span>Octavos de Final:</span> <span className="text-gold-500 font-bold">3 puntos</span>
+                </li>
+                <li className="flex justify-between border-b border-white/5 pb-1">
+                  <span>Cuartos de Final:</span> <span className="text-gold-500 font-bold">4 puntos</span>
+                </li>
+                <li className="flex justify-between border-b border-white/5 pb-1">
+                  <span>Semifinales:</span> <span className="text-gold-500 font-bold">5 puntos</span>
+                </li>
+                <li className="flex justify-between pb-1">
+                  <span>Gran Final:</span> <span className="text-gold-500 font-bold">6 puntos</span>
+                </li>
+              </ul>
             </div>
           </div>
 
@@ -151,17 +164,17 @@ export default async function HomePage() {
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <span className="text-xl">🎯</span>
-                <h3 className="font-display text-xl font-bold tracking-wide text-amber-500">2. MARCADOR EXACTO</h3>
+                <h3 className="font-display text-xl font-bold tracking-wide text-amber-500">2. BONO DE MARCADOR</h3>
               </div>
               <p className="text-white/50 text-xs leading-relaxed mb-4">
-                Si además de acertar al ganador, predices la cantidad **exacta de goles** de ambos equipos en el partido:
+                Si además de acertar al ganador, predices el **marcador exacto de goles** de ambos equipos en el partido, recibirás una bonificación:
               </p>
               <div className="bg-amber-950/20 border border-amber-500/30 p-3 rounded-lg text-center mb-4">
-                <span className="font-display text-3xl font-bold text-amber-400">3 PUNTOS</span>
-                <span className="block text-[10px] text-white/50 mt-1">Total por acertar el marcador exacto</span>
+                <span className="font-display text-3xl font-bold text-amber-400">+2 PUNTOS EXTRA</span>
+                <span className="block text-[10px] text-white/50 mt-1">Sumados sobre los puntos base de la fase</span>
               </div>
               <p className="text-white/40 text-[10px] italic">
-                Ejemplo: Si predices 2-1 y el partido termina 2-1, obtienes 3 puntos (en lugar del punto único por ganador).
+                Ejemplo: Aciertas el marcador exacto en Octavos (3 pts base + 2 pts bono = 5 pts en total).
               </p>
             </div>
           </div>
@@ -174,8 +187,11 @@ export default async function HomePage() {
                 <h3 className="font-display text-xl font-bold tracking-wide">3. TRIVIA & BLOQUEOS</h3>
               </div>
               <p className="text-white/50 text-xs leading-relaxed mb-3">
-                <strong className="text-white">Trivia Diaria:</strong> Cada día tendrás una pregunta de IA sobre la historia de los mundiales. Responde correctamente para sumar **1 punto**.
+                <strong className="text-white">Trivia Diaria:</strong> Cada día tendrás una pregunta única de IA sobre la historia de los mundiales. Tienes 10 segundos para responder.
               </p>
+              <div className="bg-white/5 p-2 rounded text-center text-xs font-semibold text-gold-500 mb-4">
+                Pregunta correcta = 1 punto
+              </div>
               <p className="text-white/50 text-xs leading-relaxed">
                 <strong className="text-white">Bloqueo de Fases:</strong> Las predicciones de cada fase se cierran automáticamente en cuanto comienza el **primer partido** de esa respectiva fase.
               </p>
