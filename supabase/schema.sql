@@ -124,6 +124,10 @@ CREATE POLICY "Usuarios actualizan sus predicciones (antes del partido)"
   ON public.predictions FOR UPDATE TO authenticated
   USING (auth.uid() = user_id);
 
+CREATE POLICY "Usuarios eliminan sus propias predicciones"
+  ON public.predictions FOR DELETE TO authenticated
+  USING (auth.uid() = user_id);
+
 -- Service role puede actualizar todas (para el cron de resultados)
 CREATE POLICY "Service role puede todo en predictions"
   ON public.predictions FOR ALL TO service_role USING (true);
