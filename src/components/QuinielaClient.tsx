@@ -97,6 +97,10 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
       
     if (phaseMatchesWithDates.length === 0) return false // No matches/dates loaded yet, open
 
+    const earliestDate = new Date(Math.min(...phaseMatchesWithDates.map(d => d.getTime())))
+    return new Date() >= earliestDate
+  }
+
   const isGracePeriodActive = new Date() < new Date('2026-06-12T02:30:00Z')
 
   const isTemporaryBypassActive = (m: Match) => {
