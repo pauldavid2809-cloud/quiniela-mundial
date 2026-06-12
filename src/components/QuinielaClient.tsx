@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { format, parseISO } from 'date-fns'
+import { parseISO } from 'date-fns'
+import { toZonedTime, format as formatTz } from 'date-fns-tz'
 import { es } from 'date-fns/locale'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -116,13 +117,16 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
   const isCurrentPhaseHasPlaceholders = getPhasePlaceholderStatus(activePhase)
   const isCurrentPhaseOpen = activePhase === 'groups' || currentPhase?.is_unlocked || (phaseMatches.length > 0 && !isCurrentPhaseLocked && !isCurrentPhaseHasPlaceholders)
 
-  // Group by day for visual separation
+  // Group by day for visual separation (using Caracas timezone America/Caracas)
+  const timeZone = 'America/Caracas'
   const groupedByDay = phaseMatches.reduce((acc, m) => {
     if (!m.match_date) return acc
-    const dateStr = m.match_date.split('T')[0]
+    const matchDate = parseISO(m.match_date)
+    const zonedDate = toZonedTime(matchDate, timeZone)
+    const dateStr = formatTz(zonedDate, 'yyyy-MM-dd', { timeZone })
     if (!acc[dateStr]) {
       acc[dateStr] = {
-        dateLabel: format(parseISO(m.match_date), "EEEE d 'de' MMMM", { locale: es }),
+        dateLabel: formatTz(zonedDate, "EEEE d 'de' MMMM", { locale: es, timeZone }),
         matches: []
       }
     }

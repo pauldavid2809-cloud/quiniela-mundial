@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { parseISO } from 'date-fns'
+import { toZonedTime, format as formatTz } from 'date-fns-tz'
+import { es } from 'date-fns/locale'
 
 interface Match {
   id: number
@@ -187,8 +190,12 @@ export default function AdminPartidosPage() {
                 <div className="text-right shrink-0">
                   <div className="text-white/40 text-xs">{match.group_name || phaseLabels[match.phase]}</div>
                   {match.match_date && (
-                    <div className="text-white/30 text-xs">
-                      {new Date(match.match_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
+                    <div className="text-white/30 text-xs uppercase">
+                      {(() => {
+                        const date = parseISO(match.match_date)
+                        const zoned = toZonedTime(date, 'America/Caracas')
+                        return formatTz(zoned, 'dd MMM', { locale: es, timeZone: 'America/Caracas' })
+                      })()}
                     </div>
                   )}
                 </div>
