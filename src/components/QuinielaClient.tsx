@@ -97,11 +97,18 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
       
     if (phaseMatchesWithDates.length === 0) return false // No matches/dates loaded yet, open
 
-    const earliestDate = new Date(Math.min(...phaseMatchesWithDates.map(d => d.getTime())))
-    return new Date() >= earliestDate
+  const isGracePeriodActive = new Date() < new Date('2026-06-12T02:30:00Z')
+
+  const isTemporaryBypassActive = (m: Match) => {
+    if (!isGracePeriodActive) return false
+    const isMexicoSudafrica = 
+      m.api_id === 1 || 
+      (m.home_team === 'México' && m.away_team === 'Sudáfrica') ||
+      (m.home_team === 'Mexico' && m.away_team === 'South Africa')
+    return !isMexicoSudafrica
   }
 
-  const isCurrentPhaseLocked = getPhaseLockStatus(activePhase)
+  const isCurrentPhaseLocked = getPhaseLockStatus(activePhase) && !(activePhase === 'groups' && isGracePeriodActive)
   const isCurrentPhaseHasPlaceholders = getPhasePlaceholderStatus(activePhase)
   const isCurrentPhaseOpen = activePhase === 'groups' || currentPhase?.is_unlocked || (phaseMatches.length > 0 && !isCurrentPhaseLocked && !isCurrentPhaseHasPlaceholders)
 
@@ -126,7 +133,7 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
     if (!match) return
     
     // Check dynamic lock status for this match's phase
-    const isLocked = match.status !== 'scheduled' || getPhaseLockStatus(match.phase)
+    const isLocked = (match.status !== 'scheduled' || getPhaseLockStatus(match.phase)) && !isTemporaryBypassActive(match)
     if (isLocked) return
 
     setSaving(matchId)
@@ -210,7 +217,7 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
         {phases.map(phase => {
           const predCount = phasePredCount(phase.name)
           const matchCount = phaseMatchCount(phase.name)
-          const isPhaseLocked = getPhaseLockStatus(phase.name)
+          const isPhaseLocked = getPhaseLockStatus(phase.name) && !(phase.name === 'groups' && isGracePeriodActive)
           const hasPlaceholders = getPhasePlaceholderStatus(phase.name)
           // Convenient auto-open: accessible if Groups, manually unlocked, or matches loaded, no lock, and no placeholders
           const isPhaseOpen = phase.name === 'groups' || phase.is_unlocked || (matchCount > 0 && !isPhaseLocked && !hasPlaceholders)
@@ -241,12 +248,17 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
       </div>
 
       {/* Phase lock info banner */}
-      {isCurrentPhaseLocked && (
+      {isGracePeriodActive && activePhase === 'groups' ? (
+        <div className="mb-4 p-3 bg-amber-950/30 border border-amber-500/30 text-amber-300 text-sm rounded-lg flex items-center gap-2 animate-pulse">
+          <span>🔓</span>
+          <span><strong>Periodo de gracia activo</strong>: Puedes registrar o modificar tus predicciones para todos los partidos de esta fase (excepto México vs Sudáfrica) durante la próxima hora.</span>
+        </div>
+      ) : isCurrentPhaseLocked ? (
         <div className="mb-4 p-3 bg-red-950/30 border border-red-500/30 text-red-300 text-sm rounded-lg flex items-center gap-2">
           <span>🔒</span>
           <span>Esta fase se encuentra **CERRADA**. El primer partido de esta fase ya ha comenzado y no se permiten más predicciones.</span>
         </div>
-      )}
+      ) : null}
 
       {/* Phase locked message */}
       {!isCurrentPhaseOpen ? (
@@ -283,7 +295,7 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
                     predicted_home_score: null,
                     predicted_away_score: null
                   }
-                  const isPhaseLocked = getPhaseLockStatus(match.phase)
+                  const isPhaseLocked = getPhaseLockStatus(match.phase) && !isTemporaryBypassActive(match)
                   
                   return (
                     <MatchCard
