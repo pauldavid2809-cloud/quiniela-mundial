@@ -43,6 +43,7 @@ export default function TriviaPage() {
   const [timerActive, setTimerActive] = useState(false)
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
+  const [generating, setGenerating] = useState(false)
   const [worldCupStarted] = useState(true) // set to false before the World Cup begins
   const timerRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -52,15 +53,25 @@ export default function TriviaPage() {
     if (!user) return
     setUserId(user.id)
 
-    const today = new Date().toISOString().split('T')[0]
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Caracas',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date()).split('/')
+    const todayStr = `${parts[2]}-${parts[0]}-${parts[1]}` // YYYY-MM-DD
 
-    // Get today's active question
-    const { data: q } = await supabase
+    // Get today's generated question for this user
+    const { data: qs } = await supabase
       .from('trivia_questions')
       .select('*')
-      .eq('active_date', today)
-      .eq('is_active', true)
-      .single()
+      .eq('created_by', user.id)
+      .gte('created_at', `${todayStr}T00:00:00-04:00`)
+      .lte('created_at', `${todayStr}T23:59:59-04:00`)
+      .order('created_at', { ascending: false })
+      .limit(1)
+
+    const q = qs && qs.length > 0 ? qs[0] : null
 
     if (q) {
       setQuestion(q)
@@ -85,6 +96,25 @@ export default function TriviaPage() {
 
     setLoading(false)
   }, [supabase])
+
+  const generateUserTrivia = async () => {
+    setGenerating(true)
+    try {
+      const res = await fetch('/api/trivia/generate', { method: 'POST' })
+      const data = await res.json()
+      if (res.ok && data.question) {
+        setQuestion(data)
+        setTimerActive(true)
+        setTimeLeft(TIMER_SECONDS)
+      } else {
+        alert('Error al generar la trivia: ' + (data.error || 'Inténtalo de nuevo.'))
+      }
+    } catch (err) {
+      console.error('Error generating trivia:', err)
+      alert('Error de conexión al generar la trivia.')
+    }
+    setGenerating(false)
+  }
 
   useEffect(() => {
     loadQuestion()
@@ -204,10 +234,26 @@ export default function TriviaPage() {
           <p className="text-white/50">Cargando pregunta de hoy...</p>
         </div>
       ) : !question ? (
-        <div className="glass-card p-12 text-center">
-          <div className="text-5xl mb-4">😴</div>
-          <h3 className="font-display text-2xl text-white/70 mb-2">SIN PREGUNTA HOY</h3>
-          <p className="text-white/40">El administrador aún no ha publicado la pregunta de hoy. ¡Vuelve más tarde!</p>
+        <div className="glass-card p-12 text-center animate-fade-in">
+          <div className="text-6xl mb-4">🧠</div>
+          <h3 className="font-display text-2xl text-white mb-2">PREGUNTA DIARIA CON IA</h3>
+          <p className="text-white/50 max-w-md mx-auto mb-6">
+            Genera tu pregunta aleatoria única de la Copa Mundial para hoy. Tienes 10 segundos para responder y ganar 1 punto.
+          </p>
+          <button
+            onClick={generateUserTrivia}
+            disabled={generating}
+            className="btn-gold flex items-center justify-center gap-2 mx-auto px-6 py-3 cursor-pointer"
+          >
+            {generating ? (
+              <>
+                <span className="w-5 h-5 border-2 border-navy-900 border-t-transparent rounded-full animate-spin" />
+                Generando pregunta...
+              </>
+            ) : (
+              '🎲 Generar mi pregunta de hoy'
+            )}
+          </button>
         </div>
       ) : (
         <div className="space-y-4">
