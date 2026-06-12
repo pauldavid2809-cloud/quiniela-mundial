@@ -22,7 +22,7 @@ interface TriviaAnswer {
   points_earned: number
 }
 
-const TIMER_SECONDS = 10
+const TIMER_SECONDS = 15
 const OPTIONS = ['a', 'b', 'c', 'd'] as const
 const OPTION_LABELS = { a: 'A', b: 'B', c: 'C', d: 'D' }
 const OPTION_COLORS = {
@@ -84,13 +84,39 @@ export default function TriviaPage() {
         .eq('question_id', q.id)
         .single()
 
+      const createdAt = new Date(q.created_at).getTime()
+      const now = new Date().getTime()
+      const elapsedSeconds = Math.floor((now - createdAt) / 1000)
+
       if (ans) {
         setAlreadyAnswered(ans)
         setSelectedAnswer(ans.answer)
         setRevealed(true)
+      } else if (elapsedSeconds >= TIMER_SECONDS) {
+        // Automatically insert a timeout answer to prevent cheating by reloading
+        const { error } = await supabase.from('trivia_answers').insert({
+          user_id: user.id,
+          question_id: q.id,
+          answer: 'timeout',
+          is_correct: false,
+          points_earned: 0,
+        })
+        if (!error) {
+          router.refresh()
+        }
+        setAlreadyAnswered({
+          question_id: q.id,
+          answer: 'timeout',
+          is_correct: false,
+          points_earned: 0,
+        } as TriviaAnswer)
+        setSelectedAnswer('timeout')
+        setRevealed(true)
+        setTimeLeft(0)
       } else {
+        const remaining = Math.max(1, TIMER_SECONDS - elapsedSeconds)
         setTimerActive(true)
-        setTimeLeft(TIMER_SECONDS)
+        setTimeLeft(remaining)
       }
     }
 
@@ -332,12 +358,11 @@ export default function TriviaPage() {
             </div>
           </div>
 
-          {/* Result */}
           {revealed && (
             <div className={`glass-card p-5 text-center animate-bounce-in ${
               selectedAnswer === question.correct_answer
                 ? 'border-green-500/40'
-                : timeLeft === 0 && !selectedAnswer
+                : (timeLeft === 0 && !selectedAnswer) || selectedAnswer === 'timeout'
                   ? 'border-orange-500/40'
                   : 'border-red-500/30'
             }`}>
@@ -347,7 +372,7 @@ export default function TriviaPage() {
                   <div className="font-display text-2xl text-green-400 mb-1">¡CORRECTO!</div>
                   <div className="text-white/60">Sumaste <span className="text-gold-500 font-bold">+1 punto</span> al ranking</div>
                 </>
-              ) : timeLeft === 0 && !selectedAnswer ? (
+              ) : (timeLeft === 0 && !selectedAnswer) || selectedAnswer === 'timeout' ? (
                 <>
                   <div className="text-4xl mb-2">⏱️</div>
                   <div className="font-display text-2xl text-orange-400 mb-1">¡TIEMPO!</div>
