@@ -50,10 +50,11 @@ export default function AdminTriviaPage() {
 
   const generateWithAI = async () => {
     setGenerating(true)
+    setMsg('')
     try {
       const res = await fetch('/api/generate-trivia', { method: 'POST' })
       const data = await res.json()
-      if (data.question) {
+      if (res.ok && data.question) {
         setForm(prev => ({
           ...prev,
           question: data.question,
@@ -64,9 +65,11 @@ export default function AdminTriviaPage() {
           correct_answer: data.correct_answer,
         }))
         setMsg('✅ Pregunta generada con IA. Revísala y guárdala.')
+      } else {
+        setMsg('❌ Error: ' + (data.error || 'No se pudo generar la pregunta con la IA.'))
       }
-    } catch {
-      setMsg('❌ Error al generar pregunta con IA')
+    } catch (e: any) {
+      setMsg('❌ Error al generar pregunta con IA: ' + (e?.message || 'Error de conexión'))
     }
     setGenerating(false)
   }
