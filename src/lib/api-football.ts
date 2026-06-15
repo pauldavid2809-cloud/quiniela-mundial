@@ -190,7 +190,42 @@ function mapPhase(type: string): string {
   }
 }
 
-function parseLocalDate(localDateStr: string): string | null {
+function getStadiumOffset(stadiumId: string): string {
+  switch (stadiumId) {
+    // Eastern Time (EDT: UTC-4)
+    case '7':  // Mercedes-Benz Stadium, Atlanta
+    case '8':  // Hard Rock Stadium, Miami
+    case '9':  // Gillette Stadium, Boston
+    case '10': // Lincoln Financial Field, Philadelphia
+    case '11': // MetLife Stadium, New York/New Jersey
+    case '12': // BMO Field, Toronto
+      return '-04:00'
+
+    // Central Time (CDT: UTC-5)
+    case '4':  // AT&T Stadium, Dallas
+    case '5':  // NRG Stadium, Houston
+    case '6':  // GEHA Field at Arrowhead Stadium, Kansas City
+      return '-05:00'
+
+    // Monterrey / Mexico City / Guadalajara (CST: UTC-6)
+    case '1':  // Estadio Azteca, Ciudad de México
+    case '2':  // Estadio Akron, Guadalajara
+    case '3':  // Estadio BBVA, Monterrey
+      return '-06:00'
+
+    // Pacific Time (PDT: UTC-7)
+    case '13': // BC Place, Vancouver
+    case '14': // Lumen Field, Seattle
+    case '15': // Levi's Stadium, San Francisco Bay Area
+    case '16': // SoFi Stadium, Los Angeles
+      return '-07:00'
+
+    default:
+      return 'Z' // Fallback to UTC if unknown
+  }
+}
+
+function parseLocalDate(localDateStr: string, stadiumId?: string): string | null {
   if (!localDateStr) return null
   try {
     const parts = localDateStr.split(' ')
@@ -199,7 +234,8 @@ function parseLocalDate(localDateStr: string): string | null {
     if (dateParts.length < 3) return null
     const [month, day, year] = dateParts
     const time = parts[1]
-    return `${year}-${month}-${day}T${time}:00.000Z`
+    const offset = stadiumId ? getStadiumOffset(stadiumId) : 'Z'
+    return `${year}-${month}-${day}T${time}:00.000${offset}`
   } catch {
     return null
   }
@@ -241,7 +277,7 @@ export function transformApiGame(game: ApiGame) {
     home_flag: game.home_team_name_en ? getFlag(game.home_team_name_en) : '',
     away_flag: game.away_team_name_en ? getFlag(game.away_team_name_en) : '',
     phase,
-    match_date: parseLocalDate(game.local_date),
+    match_date: parseLocalDate(game.local_date, game.stadium_id),
     home_score: isStarted ? parseInt(game.home_score) : null,
     away_score: isStarted ? parseInt(game.away_score) : null,
     status,

@@ -102,13 +102,33 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
     return new Date() >= earliestDate
   }
 
+  const groupPhaseDeadline = new Date('2026-06-15T14:39:43Z').getTime()
+
   // Check if a specific match is locked for predictions.
   // Locked if status is 'completed' or if current time is 1 hour or more past the match start date/time.
   const isMatchLocked = (m: Match) => {
+    const currentTime = new Date().getTime()
+
+    // Special deadline rule for Group Phase (1-hour window from now)
+    if (m.phase === 'groups') {
+      // Lock everything if we are past the 1-hour grace window
+      if (currentTime >= groupPhaseDeadline) {
+        return true
+      }
+      // Completed group matches are locked
+      if (m.status === 'completed') {
+        return true
+      }
+      // Scheduled group matches are open
+      if (m.status === 'scheduled') {
+        return false
+      }
+    }
+
+    // Default rules (for live matches, other phases, or completed matches)
     if (m.status === 'completed') return true
     if (!m.match_date) return false
     const matchTime = new Date(m.match_date).getTime()
-    const currentTime = new Date().getTime()
     const gracePeriodDuration = 60 * 60 * 1000 // 1 hour grace period
     return currentTime >= matchTime + gracePeriodDuration
   }
@@ -256,7 +276,12 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
       </div>
 
       {/* Phase lock info banner */}
-      {isCurrentPhaseLocked ? (
+      {activePhase === 'groups' && new Date().getTime() >= groupPhaseDeadline ? (
+        <div className="mb-4 p-3 bg-red-950/30 border border-red-500/30 text-red-300 text-sm rounded-lg flex items-center gap-2 animate-fade-in">
+          <span>🔒</span>
+          <span>La fase de grupos ha cerrado para predicciones. Todos los partidos se encuentran bloqueados.</span>
+        </div>
+      ) : isCurrentPhaseLocked ? (
         <div className="mb-4 p-3 bg-amber-950/30 border border-amber-500/30 text-amber-300 text-sm rounded-lg flex items-center gap-2">
           <span>⏳</span>
           <span>Esta fase se encuentra en curso. Aún puedes registrar o modificar predicciones para partidos que no hayan comenzado o tengan menos de 1 hora de juego (tiempo de gracia).</span>
