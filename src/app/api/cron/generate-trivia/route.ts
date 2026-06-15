@@ -108,6 +108,8 @@ La pregunta debe ser interesante, con dificultad variada (de media a alta), y re
 
 ${previousQuestionsText ? `IMPORTANTE: Para evitar repeticiones, NO debes generar ninguna pregunta idéntica ni muy similar a las siguientes preguntas que ya existen en la base de datos:\n${previousQuestionsText}` : ''}
 
+CRÍTICO: Verifica minuciosamente la veracidad histórica de la pregunta y las opciones antes de responder. Asegúrate al 100% de que la opción que indiques como correcta en "correct_answer" sea inequívocamente la única correcta según los hechos históricos de la Copa Mundial de la FIFA (por ejemplo, ten extremo cuidado con las selecciones debutantes, las fechas, los mundiales del siglo XX vs siglo XXI, y estadísticas de goleadores).
+
 Responde ÚNICAMENTE con un objeto JSON válido, sin texto adicional, sin comillas de código, exactamente en este formato:
 {
   "question": "¿Pregunta aquí?",
@@ -137,7 +139,7 @@ Solo una de las opciones (a, b, c o d) debe ser la correcta. Las otras tres debe
         response_format: {
           type: 'json_object',
         },
-        temperature: 1.0,
+        temperature: 0.2,
       }),
     })
 
