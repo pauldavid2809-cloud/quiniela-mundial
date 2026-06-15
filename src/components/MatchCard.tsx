@@ -61,7 +61,7 @@ export default function MatchCard({
   const isLive = match.status === 'live'
   const isDone = match.status === 'completed'
 
-  const isLocked = isPhaseLocked || !isScheduled
+  const isLocked = !!isPhaseLocked
 
   const matchDate = match.match_date ? parseISO(match.match_date) : null
   

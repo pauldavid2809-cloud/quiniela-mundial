@@ -102,20 +102,21 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
     return new Date() >= earliestDate
   }
 
-  const isGracePeriodActive = new Date() < new Date('2026-06-12T02:30:00Z')
-
-  const isTemporaryBypassActive = (m: Match) => {
-    if (!isGracePeriodActive) return false
-    const isMexicoSudafrica = 
-      m.api_id === 1 || 
-      (m.home_team === 'México' && m.away_team === 'Sudáfrica') ||
-      (m.home_team === 'Mexico' && m.away_team === 'South Africa')
-    return !isMexicoSudafrica
+  // Check if a specific match is locked for predictions.
+  // Locked if status is 'completed' or if current time is 1 hour or more past the match start date/time.
+  const isMatchLocked = (m: Match) => {
+    if (m.status === 'completed') return true
+    if (!m.match_date) return false
+    const matchTime = new Date(m.match_date).getTime()
+    const currentTime = new Date().getTime()
+    const gracePeriodDuration = 60 * 60 * 1000 // 1 hour grace period
+    return currentTime >= matchTime + gracePeriodDuration
   }
 
-  const isCurrentPhaseLocked = getPhaseLockStatus(activePhase) && !(activePhase === 'groups' && isGracePeriodActive)
+  const isCurrentPhaseLocked = getPhaseLockStatus(activePhase)
   const isCurrentPhaseHasPlaceholders = getPhasePlaceholderStatus(activePhase)
-  const isCurrentPhaseOpen = activePhase === 'groups' || currentPhase?.is_unlocked || (phaseMatches.length > 0 && !isCurrentPhaseLocked && !isCurrentPhaseHasPlaceholders)
+  // A phase is open (accessible) if it's groups, manually unlocked, or if matches are loaded and there are no placeholder teams.
+  const isCurrentPhaseOpen = activePhase === 'groups' || currentPhase?.is_unlocked || (phaseMatches.length > 0 && !isCurrentPhaseHasPlaceholders)
 
   // Group by day for visual separation (using Caracas timezone America/Caracas)
   const timeZone = 'America/Caracas'
@@ -140,9 +141,8 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
     const match = matches.find(m => m.id === matchId)
     if (!match) return
     
-    // Check dynamic lock status for this match's phase
-    const isLocked = (match.status !== 'scheduled' || getPhaseLockStatus(match.phase)) && !isTemporaryBypassActive(match)
-    if (isLocked) return
+    // Check if the specific match is locked (including the 1-hour grace period)
+    if (isMatchLocked(match)) return
 
     setSaving(matchId)
 
@@ -225,10 +225,10 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
         {phases.map(phase => {
           const predCount = phasePredCount(phase.name)
           const matchCount = phaseMatchCount(phase.name)
-          const isPhaseLocked = getPhaseLockStatus(phase.name) && !(phase.name === 'groups' && isGracePeriodActive)
+          const isPhaseLocked = getPhaseLockStatus(phase.name)
           const hasPlaceholders = getPhasePlaceholderStatus(phase.name)
-          // Convenient auto-open: accessible if Groups, manually unlocked, or matches loaded, no lock, and no placeholders
-          const isPhaseOpen = phase.name === 'groups' || phase.is_unlocked || (matchCount > 0 && !isPhaseLocked && !hasPlaceholders)
+          // Convenient auto-open: accessible if Groups, manually unlocked, or matches loaded and no placeholders
+          const isPhaseOpen = phase.name === 'groups' || phase.is_unlocked || (matchCount > 0 && !hasPlaceholders)
 
           return (
             <button
@@ -239,7 +239,7 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
               }`}
             >
               {isPhaseLocked ? (
-                <span className="text-xs" title="Fase cerrada (partido en curso/terminado)">🔒</span>
+                <span className="text-xs" title="Fase en curso (algunos partidos iniciados/finalizados)">⏳</span>
               ) : !isPhaseOpen ? (
                 <span className="text-xs" title="Esperando confirmación de clasificados">🔒</span>
               ) : null}
@@ -256,15 +256,10 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
       </div>
 
       {/* Phase lock info banner */}
-      {isGracePeriodActive && activePhase === 'groups' ? (
-        <div className="mb-4 p-3 bg-amber-950/30 border border-amber-500/30 text-amber-300 text-sm rounded-lg flex items-center gap-2 animate-pulse">
-          <span>🔓</span>
-          <span><strong>Periodo de gracia activo</strong>: Puedes registrar o modificar tus predicciones para todos los partidos de esta fase (excepto México vs Sudáfrica) durante la próxima hora.</span>
-        </div>
-      ) : isCurrentPhaseLocked ? (
-        <div className="mb-4 p-3 bg-red-950/30 border border-red-500/30 text-red-300 text-sm rounded-lg flex items-center gap-2">
-          <span>🔒</span>
-          <span>Esta fase se encuentra **CERRADA**. El primer partido de esta fase ya ha comenzado y no se permiten más predicciones.</span>
+      {isCurrentPhaseLocked ? (
+        <div className="mb-4 p-3 bg-amber-950/30 border border-amber-500/30 text-amber-300 text-sm rounded-lg flex items-center gap-2">
+          <span>⏳</span>
+          <span>Esta fase se encuentra en curso. Aún puedes registrar o modificar predicciones para partidos que no hayan comenzado o tengan menos de 1 hora de juego (tiempo de gracia).</span>
         </div>
       ) : null}
 
@@ -303,7 +298,7 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
                     predicted_home_score: null,
                     predicted_away_score: null
                   }
-                  const isPhaseLocked = getPhaseLockStatus(match.phase) && !isTemporaryBypassActive(match)
+                  const isLocked = isMatchLocked(match)
                   
                   return (
                     <MatchCard
@@ -315,7 +310,7 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
                       onPredict={handlePredict}
                       saving={saving === match.id}
                       pointsValue={currentPhase?.points_value || 1}
-                      isPhaseLocked={isPhaseLocked}
+                      isPhaseLocked={isLocked}
                     />
                   )
                 })}
