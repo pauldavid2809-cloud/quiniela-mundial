@@ -9,11 +9,41 @@ const supabase = createClient(
 
 export async function POST() {
   try {
+    // 1. Fetch recent matches from API (bypass cache)
     const recentMatches = await fetchRecentMatches(true)
 
     if (!recentMatches.length) {
       return NextResponse.json({ message: 'No hay partidos completados aún' })
     }
+
+    // 2. Fetch all DB matches in a single query
+    const { data: dbMatches, error: dbMatchesError } = await supabase
+      .from('matches')
+      .select('id, phase, status, home_score, away_score, home_team, away_team')
+
+    if (dbMatchesError || !dbMatches) {
+      throw new Error('Error al obtener partidos de la base de datos')
+    }
+
+    const dbMatchMap = new Map<string, any>()
+    for (const dbMatch of dbMatches) {
+      const key = `${dbMatch.home_team}_${dbMatch.away_team}`
+      dbMatchMap.set(key, dbMatch)
+    }
+
+    // 3. Fetch all phases once to get points values
+    const { data: phases, error: phasesError } = await supabase
+      .from('phases')
+      .select('name, points_value')
+
+    if (phasesError || !phases) {
+      throw new Error('Error al obtener fases de la base de datos')
+    }
+
+    const phasePoints: Record<string, number> = {}
+    phases.forEach((p: any) => {
+      phasePoints[p.name] = p.points_value
+    })
 
     let updatedMatches = 0
     let updatedPredictions = 0
@@ -22,12 +52,8 @@ export async function POST() {
     for (const match of recentMatches) {
       if (match.home_score === null || match.away_score === null) continue
 
-      const { data: dbMatch } = await supabase
-        .from('matches')
-        .select('id, phase, status, home_score, away_score')
-        .eq('home_team', match.home_team)
-        .eq('away_team', match.away_team)
-        .single()
+      const key = `${match.home_team}_${match.away_team}`
+      const dbMatch = dbMatchMap.get(key)
 
       if (!dbMatch) continue
 
@@ -53,14 +79,7 @@ export async function POST() {
       // Evaluate predictions ONLY when the match is completed
       if (match.status === 'completed') {
         const result = getMatchResult(match.home_score, match.away_score)
-
-        const { data: phase } = await supabase
-          .from('phases')
-          .select('points_value')
-          .eq('name', dbMatch.phase)
-          .single()
-
-        const pointsValue = phase?.points_value || 1
+        const pointsValue = phasePoints[dbMatch.phase] || 1
 
         const { data: predictions } = await supabase
           .from('predictions')
@@ -124,9 +143,9 @@ export async function POST() {
       updatedPredictions,
       affectedUsers: affectedUsers.size,
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('update-results error:', error)
-    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+    return NextResponse.json({ error: error.message || 'Error interno' }, { status: 500 })
   }
 }
 
