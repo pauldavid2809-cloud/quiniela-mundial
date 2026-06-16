@@ -241,12 +241,13 @@ function parseLocalDate(localDateStr: string, stadiumId?: string): string | null
   }
 }
 
-export async function fetchAllMatches() {
+export async function fetchAllMatches(bypassCache: boolean = false) {
   try {
-    const res = await fetch(WC_GAMES_URL, {
-      next: { revalidate: 3600 },
-      headers: { 'Accept': 'application/json' }
-    })
+    const fetchOptions: RequestInit = bypassCache
+      ? { cache: 'no-store' as const, headers: { 'Accept': 'application/json' } }
+      : { next: { revalidate: 3600 }, headers: { 'Accept': 'application/json' } }
+
+    const res = await fetch(WC_GAMES_URL, fetchOptions)
 
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
 
@@ -286,8 +287,8 @@ export function transformApiGame(game: ApiGame) {
   }
 }
 
-export async function fetchRecentMatches() {
-  const all = await fetchAllMatches()
+export async function fetchRecentMatches(bypassCache: boolean = false) {
+  const all = await fetchAllMatches(bypassCache)
   return all.filter(m => m.status === 'completed' || m.status === 'live')
 }
 
