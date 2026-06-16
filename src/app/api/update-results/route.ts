@@ -24,12 +24,17 @@ export async function POST() {
 
       const { data: dbMatch } = await supabase
         .from('matches')
-        .select('id, phase, status')
+        .select('id, phase, status, home_score, away_score')
         .eq('home_team', match.home_team)
         .eq('away_team', match.away_team)
         .single()
 
       if (!dbMatch) continue
+
+      const scoreChanged = dbMatch.home_score !== match.home_score || dbMatch.away_score !== match.away_score
+
+      // Skip match only if it was already marked as completed and scores haven't changed
+      if (dbMatch.status === 'completed' && !scoreChanged) continue
 
       await supabase
         .from('matches')
@@ -43,8 +48,6 @@ export async function POST() {
 
       updatedMatches++
 
-      if (dbMatch.status === 'completed') continue
-
       const result = getMatchResult(match.home_score, match.away_score)
 
       const { data: phase } = await supabase
@@ -57,9 +60,8 @@ export async function POST() {
 
       const { data: predictions } = await supabase
         .from('predictions')
-        .select('id, user_id, prediction, predicted_home_score, predicted_away_score')
+        .select('id, user_id, prediction, predicted_home_score, predicted_away_score, is_correct, points_earned')
         .eq('match_id', dbMatch.id)
-        .is('is_correct', null)
 
       if (predictions) {
         for (const pred of predictions) {
@@ -76,16 +78,19 @@ export async function POST() {
             ? (pointsValue + (isExactScore ? 2 : 0)) 
             : 0
 
-          await supabase
-            .from('predictions')
-            .update({
-              is_correct: isCorrect,
-              points_earned: pointsEarned,
-            })
-            .eq('id', pred.id)
+          // Update only if results changed or weren't evaluated yet
+          if (pred.is_correct !== isCorrect || pred.points_earned !== pointsEarned) {
+            await supabase
+              .from('predictions')
+              .update({
+                is_correct: isCorrect,
+                points_earned: pointsEarned,
+              })
+              .eq('id', pred.id)
 
-          affectedUsers.add(pred.user_id)
-          updatedPredictions++
+            affectedUsers.add(pred.user_id)
+            updatedPredictions++
+          }
         }
       }
     }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -12,6 +12,16 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const supabase = createClient()
+
+  useEffect(() => {
+    // Clear potentially stale supabase session to prevent AuthApiError in console
+    try {
+      localStorage.removeItem('sb-sdvlaeulvohfpfqaypiw-auth-token')
+      supabase.auth.signOut()
+    } catch (e) {
+      console.error('Error clearing stale auth session:', e)
+    }
+  }, [supabase])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
