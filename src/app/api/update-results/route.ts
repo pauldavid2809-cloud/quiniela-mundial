@@ -32,78 +32,84 @@ export async function POST() {
       if (!dbMatch) continue
 
       const scoreChanged = dbMatch.home_score !== match.home_score || dbMatch.away_score !== match.away_score
+      const statusChanged = dbMatch.status !== match.status
 
-      // Get predictions and points value to determine if updates are needed
-      const result = getMatchResult(match.home_score, match.away_score)
+      // If nothing changed, skip this match entirely
+      if (!scoreChanged && !statusChanged) continue
 
-      const { data: phase } = await supabase
-        .from('phases')
-        .select('points_value')
-        .eq('name', dbMatch.phase)
-        .single()
+      // Update match record with current score and status ('live' or 'completed')
+      await supabase
+        .from('matches')
+        .update({
+          home_score: match.home_score,
+          away_score: match.away_score,
+          status: match.status,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', dbMatch.id)
 
-      const pointsValue = phase?.points_value || 1
+      updatedMatches++
 
-      const { data: predictions } = await supabase
-        .from('predictions')
-        .select('id, user_id, prediction, predicted_home_score, predicted_away_score, is_correct, points_earned')
-        .eq('match_id', dbMatch.id)
+      // Evaluate predictions ONLY when the match is completed
+      if (match.status === 'completed') {
+        const result = getMatchResult(match.home_score, match.away_score)
 
-      let predictionsNeedUpdate = false
-      const checkedPredictions: any[] = []
+        const { data: phase } = await supabase
+          .from('phases')
+          .select('points_value')
+          .eq('name', dbMatch.phase)
+          .single()
 
-      if (predictions) {
-        for (const pred of predictions) {
-          const isCorrect = pred.prediction === result
-          const isExactScore = isCorrect && 
-            pred.predicted_home_score !== null && 
-            pred.predicted_away_score !== null && 
-            pred.predicted_home_score === match.home_score && 
-            pred.predicted_away_score === match.away_score
-            
-          const pointsEarned = isCorrect 
-            ? (pointsValue + (isExactScore ? 2 : 0)) 
-            : 0
+        const pointsValue = phase?.points_value || 1
 
-          const needsUpdate = pred.is_correct !== isCorrect || pred.points_earned !== pointsEarned
-          if (needsUpdate) {
-            predictionsNeedUpdate = true
+        const { data: predictions } = await supabase
+          .from('predictions')
+          .select('id, user_id, prediction, predicted_home_score, predicted_away_score, is_correct, points_earned')
+          .eq('match_id', dbMatch.id)
+
+        const checkedPredictions: any[] = []
+        let predictionsNeedUpdate = false
+
+        if (predictions) {
+          for (const pred of predictions) {
+            const isCorrect = pred.prediction === result
+            const isExactScore = isCorrect && 
+              pred.predicted_home_score !== null && 
+              pred.predicted_away_score !== null && 
+              pred.predicted_home_score === match.home_score && 
+              pred.predicted_away_score === match.away_score
+              
+            const pointsEarned = isCorrect 
+              ? (pointsValue + (isExactScore ? 2 : 0)) 
+              : 0
+
+            const needsUpdate = pred.is_correct !== isCorrect || pred.points_earned !== pointsEarned
+            if (needsUpdate) {
+              predictionsNeedUpdate = true
+            }
+            checkedPredictions.push({ pred, isCorrect, pointsEarned, needsUpdate })
           }
-          checkedPredictions.push({ pred, isCorrect, pointsEarned, needsUpdate })
         }
-      }
 
-      // Skip match only if it was already marked as completed, scores match, and predictions are all correct
-      if (dbMatch.status === 'completed' && !scoreChanged && !predictionsNeedUpdate) continue
-
-      // Update match record if not completed or score changed
-      if (dbMatch.status !== 'completed' || scoreChanged) {
-        await supabase
-          .from('matches')
-          .update({
-            home_score: match.home_score,
-            away_score: match.away_score,
-            status: 'completed',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', dbMatch.id)
-
-        updatedMatches++
-      }
-
-      // Update predictions that need correction
-      for (const item of checkedPredictions) {
-        if (item.needsUpdate) {
-          await supabase
-            .from('predictions')
-            .update({
-              is_correct: item.isCorrect,
-              points_earned: item.pointsEarned,
+        // Update predictions in parallel if any need update
+        if (predictionsNeedUpdate) {
+          const updatePromises = checkedPredictions
+            .filter(item => item.needsUpdate)
+            .map(item => {
+              affectedUsers.add(item.pred.user_id)
+              updatedPredictions++
+              return supabase
+                .from('predictions')
+                .update({
+                  is_correct: item.isCorrect,
+                  points_earned: item.pointsEarned,
+                })
+                .eq('id', item.pred.id)
             })
-            .eq('id', item.pred.id)
 
-          affectedUsers.add(item.pred.user_id)
-          updatedPredictions++
+          if (updatePromises.length > 0) {
+            await Promise.all(updatePromises)
+          }
         }
       }
     }
