@@ -4,16 +4,100 @@ import { createAdminClient } from '@/lib/supabase/server'
 export async function GET() {
   try {
     const adminDb = createAdminClient()
-    
-    // Fetch details for questions 33, 95, 120
-    const { data: questions, error: qError } = await adminDb
+    const results: any = {
+      questionBefore: null,
+      questionAfter: null,
+      updatedAnswers: [],
+      recalculatedUsers: []
+    }
+
+    // 1. Get question 120 before update
+    const { data: qBefore } = await adminDb
       .from('trivia_questions')
       .select('*')
-      .in('id', [33, 95, 120])
+      .eq('id', 120)
+      .single()
+    results.questionBefore = qBefore
+
+    // 2. Update the trivia question's correct answer to 'a'
+    const { data: qAfter, error: qError } = await adminDb
+      .from('trivia_questions')
+      .update({ correct_answer: 'a' })
+      .eq('id', 120)
+      .select()
+      .single()
     
     if (qError) throw qError
+    results.questionAfter = qAfter
 
-    return NextResponse.json({ success: true, questions })
+    // 3. Get all answers for question 120
+    const { data: answers, error: aError } = await adminDb
+      .from('trivia_answers')
+      .select('*')
+      .eq('question_id', 120)
+
+    if (aError) throw aError
+
+    const affectedUsers = new Set<string>()
+
+    // 4. Update correctness and points for all answers
+    for (const ans of answers || []) {
+      const isCorrectNow = ans.answer === 'a'
+      const pointsEarnedNow = isCorrectNow ? 1 : 0
+
+      if (ans.is_correct !== isCorrectNow || ans.points_earned !== pointsEarnedNow) {
+        const { data: updatedAns } = await adminDb
+          .from('trivia_answers')
+          .update({
+            is_correct: isCorrectNow,
+            points_earned: pointsEarnedNow
+          })
+          .eq('id', ans.id)
+          .select()
+          .single()
+
+        results.updatedAnswers.push({
+          answerId: ans.id,
+          userId: ans.user_id,
+          userAnswer: ans.answer,
+          oldCorrect: ans.is_correct,
+          newCorrect: isCorrectNow,
+          oldPoints: ans.points_earned,
+          newPoints: pointsEarnedNow
+        })
+
+        affectedUsers.add(ans.user_id)
+      }
+    }
+
+    // 5. Explicitly call recalculate_user_points for affected users
+    for (const userId of Array.from(affectedUsers)) {
+      const { error: rpcError } = await adminDb.rpc('recalculate_user_points', {
+        p_user_id: userId
+      })
+      if (!rpcError) {
+        // Fetch profile to see new total points
+        const { data: profile } = await adminDb
+          .from('profiles')
+          .select('username, display_name, total_points')
+          .eq('id', userId)
+          .single()
+
+        results.recalculatedUsers.push({
+          userId,
+          username: profile?.username,
+          displayName: profile?.display_name,
+          newTotalPoints: profile?.total_points
+        })
+      } else {
+        results.recalculatedUsers.push({
+          userId,
+          error: rpcError.message
+        })
+      }
+    }
+
+    return NextResponse.json({ success: true, results })
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message })
   }
