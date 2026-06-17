@@ -5,50 +5,15 @@ export async function GET() {
   try {
     const adminDb = createAdminClient()
     
-    // Find all profiles containing 'victor' in username or display_name
-    const { data: profiles, error: pError } = await adminDb
-      .from('profiles')
+    // Fetch details for questions 33, 95, 120
+    const { data: questions, error: qError } = await adminDb
+      .from('trivia_questions')
       .select('*')
-      .or('username.ilike.%victor%,display_name.ilike.%victor%')
+      .in('id', [33, 95, 120])
     
-    if (pError) throw pError
+    if (qError) throw qError
 
-    const results: any[] = []
-
-    for (const profile of profiles || []) {
-      // Find their answer to question 85 (the corrected trivia question)
-      const { data: q85Answer } = await adminDb
-        .from('trivia_answers')
-        .select('*')
-        .eq('user_id', profile.id)
-        .eq('question_id', 85)
-        .single()
-
-      // Fetch all their trivia answers that are marked incorrect
-      const { data: incorrectAnswers } = await adminDb
-        .from('trivia_answers')
-        .select(`
-          id,
-          question_id,
-          answer,
-          is_correct,
-          points_earned,
-          trivia_questions (
-            question,
-            correct_answer
-          )
-        `)
-        .eq('user_id', profile.id)
-        .eq('is_correct', false)
-
-      results.push({
-        profile,
-        q85Answer,
-        incorrectAnswers
-      })
-    }
-
-    return NextResponse.json({ success: true, results })
+    return NextResponse.json({ success: true, questions })
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message })
   }
