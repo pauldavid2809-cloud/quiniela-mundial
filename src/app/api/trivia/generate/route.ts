@@ -73,7 +73,7 @@ export async function POST() {
       return NextResponse.json({ error: 'GEMINI_API_KEY no configurado' }, { status: 500 })
     }
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${geminiKey}`
     const prompt = `Genera UNA pregunta de trivia única y exclusivamente relacionada con la historia de la Copa Mundial de la FIFA.
 
 Para asegurar que sea variada, enfócate preferentemente en este subtema o área: ${randomSubtopic}.
