@@ -92,13 +92,13 @@ export async function POST(req: Request) {
     ]
     const randomSubtopic = subtopics[Math.floor(Math.random() * subtopics.length)]
 
-    // 6. Query Gemini API
-    const geminiKey = process.env.GEMINI_API_KEY
-    if (!geminiKey) {
-      return NextResponse.json({ error: 'GEMINI_API_KEY no configurado en variables de entorno' }, { status: 500 })
+    // 6. Query OpenRouter API
+    const apiKey = process.env.OPENROUTER_API_KEY
+    if (!apiKey) {
+      return NextResponse.json({ error: 'OPENROUTER_API_KEY no configurado en variables de entorno' }, { status: 500 })
     }
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${geminiKey}`
+    const apiUrl = 'https://openrouter.ai/api/v1/chat/completions'
 
     const prompt = `Genera UNA pregunta de trivia única y exclusivamente relacionada con la historia de la Copa Mundial de la FIFA.
 
@@ -122,36 +122,37 @@ Responde ÚNICAMENTE con un objeto JSON válido, sin texto adicional, sin comill
 
 Solo una de las opciones (a, b, c o d) debe ser la correcta. Las otras tres deben ser plausibles pero incorrectas.`
 
-    const response = await fetch(geminiUrl, {
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        contents: [
+        model: 'meta-llama/llama-3.3-70b-instruct:free',
+        messages: [
           {
-            parts: [
-              { text: prompt },
-            ],
+            role: 'user',
+            content: prompt,
           },
         ],
-        generationConfig: {
-          temperature: 0.2,
-          responseMimeType: 'application/json',
+        response_format: {
+          type: 'json_object',
         },
+        temperature: 0.2,
       }),
     })
 
     if (!response.ok) {
       const errText = await response.text()
-      console.error('Gemini API Error:', errText)
-      return NextResponse.json({ error: 'Error al consultar API de Gemini' }, { status: 500 })
+      console.error('OpenRouter API Error:', errText)
+      return NextResponse.json({ error: 'Error al consultar API de OpenRouter' }, { status: 500 })
     }
 
     const resJson = await response.json()
-    const textResult = resJson?.candidates?.[0]?.content?.parts?.[0]?.text
+    const textResult = resJson?.choices?.[0]?.message?.content
     if (!textResult) {
-      return NextResponse.json({ error: 'Respuesta vacía de Gemini' }, { status: 500 })
+      return NextResponse.json({ error: 'Respuesta vacía de OpenRouter' }, { status: 500 })
     }
 
     // 7. Parse and Validate JSON
@@ -159,7 +160,7 @@ Solo una de las opciones (a, b, c o d) debe ser la correcta. Las otras tres debe
     const required = ['question', 'option_a', 'option_b', 'option_c', 'option_d', 'correct_answer']
     for (const field of required) {
       if (!parsed[field]) {
-        return NextResponse.json({ error: `Campo faltante en respuesta de Gemini: ${field}` }, { status: 500 })
+        return NextResponse.json({ error: `Campo faltante en respuesta: ${field}` }, { status: 500 })
       }
     }
 

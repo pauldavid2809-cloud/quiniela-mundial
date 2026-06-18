@@ -67,13 +67,13 @@ export async function POST() {
       console.error('Error fetching recent questions:', dbError)
     }
 
-    // 5. Query Gemini API
-    const geminiKey = process.env.GEMINI_API_KEY
-    if (!geminiKey) {
-      return NextResponse.json({ error: 'GEMINI_API_KEY no configurado' }, { status: 500 })
+    // 5. Query OpenRouter API
+    const apiKey = process.env.OPENROUTER_API_KEY
+    if (!apiKey) {
+      return NextResponse.json({ error: 'OPENROUTER_API_KEY no configurado' }, { status: 500 })
     }
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${geminiKey}`
+    const apiUrl = 'https://openrouter.ai/api/v1/chat/completions'
     const prompt = `Genera UNA pregunta de trivia única y exclusivamente relacionada con la historia de la Copa Mundial de la FIFA.
 
 Para asegurar que sea variada, enfócate preferentemente en este subtema o área: ${randomSubtopic}.
@@ -96,23 +96,17 @@ Responde ÚNICAMENTE con un objeto JSON válido, sin texto adicional, sin comill
 
 Solo una de las opciones (a, b, c o d) debe ser la correcta. Las otras tres deben ser plausibles pero incorrectas.`
 
-    const response = await fetch(geminiUrl, {
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { text: prompt }
-            ],
-          }
-        ],
-        generationConfig: {
-          temperature: 0.2,
-          responseMimeType: 'application/json',
-        },
+        model: 'meta-llama/llama-3.3-70b-instruct:free',
+        messages: [{ role: 'user', content: prompt }],
+        response_format: { type: 'json_object' },
+        temperature: 0.2,
       }),
     })
 
@@ -121,13 +115,13 @@ Solo una de las opciones (a, b, c o d) debe ser la correcta. Las otras tres debe
       return NextResponse.json({ error: data.error?.message || 'Error de IA' }, { status: response.status || 500 })
     }
 
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
+    const text = data.choices?.[0]?.message?.content || ''
     const parsed = JSON.parse(text.trim())
 
     const required = ['question', 'option_a', 'option_b', 'option_c', 'option_d', 'correct_answer']
     for (const field of required) {
       if (!parsed[field]) {
-        return NextResponse.json({ error: `Campo faltante en respuesta de Gemini: ${field}` }, { status: 500 })
+        return NextResponse.json({ error: `Campo faltante en respuesta: ${field}` }, { status: 500 })
       }
     }
 
