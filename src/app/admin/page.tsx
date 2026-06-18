@@ -65,7 +65,7 @@ export default async function AdminPage() {
       </div>
 
       {/* Quick actions */}
-      <div className="grid sm:grid-cols-3 gap-3">
+      <div className="grid sm:grid-cols-4 gap-3">
         <Link href="/admin/trivia" className="glass-card p-5 hover:border-gold-500/40 transition-all text-center group">
           <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">🧠</div>
           <div className="font-display text-lg text-white">TRIVIA</div>
@@ -80,6 +80,11 @@ export default async function AdminPage() {
           <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">⚽</div>
           <div className="font-display text-lg text-white">PARTIDOS</div>
           <div className="text-white/45 text-xs">Sincronizar resultados API</div>
+        </Link>
+        <Link href="/api/admin/reset?target=admin" className="glass-card p-5 hover:border-crimson-500/40 transition-all text-center group">
+          <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">🔄</div>
+          <div className="font-display text-lg text-white">REINICIAR</div>
+          <div className="text-white/45 text-xs">Puntos y predicciones a 0</div>
         </Link>
       </div>
     </div>
