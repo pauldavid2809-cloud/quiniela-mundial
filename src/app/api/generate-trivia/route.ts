@@ -25,7 +25,7 @@ export async function POST() {
       console.error('Error al obtener preguntas previas para evitar duplicados:', dbError)
     }
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`
 
     // Creamos una lista de subtemas aleatorios para inyectar variedad en cada llamada
     const subtopics = [
