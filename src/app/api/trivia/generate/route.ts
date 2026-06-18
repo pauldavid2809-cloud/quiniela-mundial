@@ -67,13 +67,13 @@ export async function POST() {
       console.error('Error fetching recent questions:', dbError)
     }
 
-    // 5. Query Groq API
-    const groqKey = process.env.GROQ_API_KEY
-    if (!groqKey) {
-      return NextResponse.json({ error: 'GROQ_API_KEY no configurado' }, { status: 500 })
+    // 5. Query Gemini API
+    const geminiKey = process.env.GEMINI_API_KEY
+    if (!geminiKey) {
+      return NextResponse.json({ error: 'GEMINI_API_KEY no configurado' }, { status: 500 })
     }
 
-    const groqUrl = 'https://api.groq.com/openai/v1/chat/completions'
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`
     const prompt = `Genera UNA pregunta de trivia única y exclusivamente relacionada con la historia de la Copa Mundial de la FIFA.
 
 Para asegurar que sea variada, enfócate preferentemente en este subtema o área: ${randomSubtopic}.
@@ -96,17 +96,23 @@ Responde ÚNICAMENTE con un objeto JSON válido, sin texto adicional, sin comill
 
 Solo una de las opciones (a, b, c o d) debe ser la correcta. Las otras tres deben ser plausibles pero incorrectas.`
 
-    const response = await fetch(groqUrl, {
+    const response = await fetch(geminiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${groqKey}`,
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [{ role: 'user', content: prompt }],
-        response_format: { type: 'json_object' },
-        temperature: 0.2,
+        contents: [
+          {
+            parts: [
+              { text: prompt }
+            ],
+          }
+        ],
+        generationConfig: {
+          temperature: 0.2,
+          responseMimeType: 'application/json',
+        },
       }),
     })
 
@@ -115,13 +121,13 @@ Solo una de las opciones (a, b, c o d) debe ser la correcta. Las otras tres debe
       return NextResponse.json({ error: data.error?.message || 'Error de IA' }, { status: response.status || 500 })
     }
 
-    const text = data.choices?.[0]?.message?.content || ''
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
     const parsed = JSON.parse(text.trim())
 
     const required = ['question', 'option_a', 'option_b', 'option_c', 'option_d', 'correct_answer']
     for (const field of required) {
       if (!parsed[field]) {
-        return NextResponse.json({ error: `Campo faltante en respuesta de Groq: ${field}` }, { status: 500 })
+        return NextResponse.json({ error: `Campo faltante en respuesta de Gemini: ${field}` }, { status: 500 })
       }
     }
 
