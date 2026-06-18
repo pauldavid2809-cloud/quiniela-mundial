@@ -68,12 +68,12 @@ export async function POST() {
     }
 
     // 5. Query OpenRouter API
-    const apiKey = process.env.OPENROUTER_API_KEY
+    const apiKey = process.env.GEMINI_API_KEY
     if (!apiKey) {
-      return NextResponse.json({ error: 'OPENROUTER_API_KEY no configurado' }, { status: 500 })
+      return NextResponse.json({ error: 'GEMINI_API_KEY no configurado' }, { status: 500 })
     }
 
-    const apiUrl = 'https://openrouter.ai/api/v1/chat/completions'
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`
     const prompt = `Genera UNA pregunta de trivia única y exclusivamente relacionada con la historia de la Copa Mundial de la FIFA.
 
 Para asegurar que sea variada, enfócate preferentemente en este subtema o área: ${randomSubtopic}.
@@ -100,13 +100,19 @@ Solo una de las opciones (a, b, c o d) debe ser la correcta. Las otras tres debe
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'meta-llama/llama-3.3-70b-instruct:free',
-        messages: [{ role: 'user', content: prompt }],
-        response_format: { type: 'json_object' },
-        temperature: 0.2,
+        contents: [
+          {
+            parts: [
+              { text: prompt }
+            ],
+          }
+        ],
+        generationConfig: {
+          temperature: 0.2,
+          responseMimeType: 'application/json',
+        },
       }),
     })
 
@@ -115,7 +121,7 @@ Solo una de las opciones (a, b, c o d) debe ser la correcta. Las otras tres debe
       return NextResponse.json({ error: data.error?.message || 'Error de IA' }, { status: response.status || 500 })
     }
 
-    const text = data.choices?.[0]?.message?.content || ''
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
     const parsed = JSON.parse(text.trim())
 
     const required = ['question', 'option_a', 'option_b', 'option_c', 'option_d', 'correct_answer']

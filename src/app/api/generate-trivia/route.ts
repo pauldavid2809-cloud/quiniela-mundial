@@ -3,9 +3,9 @@ import { createAdminClient } from '@/lib/supabase/server'
 
 export async function POST() {
   try {
-    const apiKey = process.env.OPENROUTER_API_KEY
+    const apiKey = process.env.GEMINI_API_KEY
     if (!apiKey) {
-      return NextResponse.json({ error: 'OPENROUTER_API_KEY no configurada' }, { status: 500 })
+      return NextResponse.json({ error: 'GEMINI_API_KEY no configurada' }, { status: 500 })
     }
 
     // 1. Obtener las últimas preguntas guardadas para evitar duplicados
@@ -25,7 +25,7 @@ export async function POST() {
       console.error('Error al obtener preguntas previas para evitar duplicados:', dbError)
     }
 
-    const url = 'https://openrouter.ai/api/v1/chat/completions'
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`
 
     // Creamos una lista de subtemas aleatorios para inyectar variedad en cada llamada
     const subtopics = [
@@ -64,20 +64,19 @@ Solo una de las opciones (a, b, c o d) debe ser la correcta. Las otras tres debe
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'meta-llama/llama-3.3-70b-instruct:free',
-        messages: [
+        contents: [
           {
-            role: 'user',
-            content: prompt
+            parts: [
+              { text: prompt }
+            ],
           }
         ],
-        response_format: {
-          type: 'json_object'
+        generationConfig: {
+          temperature: 1.0, // Subimos la temperatura para forzar más creatividad y aleatoriedad
+          responseMimeType: 'application/json',
         },
-        temperature: 1.0, // Subimos la temperatura para forzar más creatividad y aleatoriedad
       }),
     })
 
@@ -87,7 +86,7 @@ Solo una de las opciones (a, b, c o d) debe ser la correcta. Las otras tres debe
       return NextResponse.json({ error: data.error?.message || 'Error de IA' }, { status: res.status || 500 })
     }
 
-    const text = data.choices?.[0]?.message?.content || ''
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
     const parsed = JSON.parse(text.trim())
 
     const required = ['question', 'option_a', 'option_b', 'option_c', 'option_d', 'correct_answer']

@@ -93,12 +93,12 @@ export async function POST(req: Request) {
     const randomSubtopic = subtopics[Math.floor(Math.random() * subtopics.length)]
 
     // 6. Query OpenRouter API
-    const apiKey = process.env.OPENROUTER_API_KEY
+    const apiKey = process.env.GEMINI_API_KEY
     if (!apiKey) {
-      return NextResponse.json({ error: 'OPENROUTER_API_KEY no configurado en variables de entorno' }, { status: 500 })
+      return NextResponse.json({ error: 'GEMINI_API_KEY no configurado en variables de entorno' }, { status: 500 })
     }
 
-    const apiUrl = 'https://openrouter.ai/api/v1/chat/completions'
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`
 
     const prompt = `Genera UNA pregunta de trivia única y exclusivamente relacionada con la historia de la Copa Mundial de la FIFA.
 
@@ -126,33 +126,32 @@ Solo una de las opciones (a, b, c o d) debe ser la correcta. Las otras tres debe
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'meta-llama/llama-3.3-70b-instruct:free',
-        messages: [
+        contents: [
           {
-            role: 'user',
-            content: prompt,
-          },
+            parts: [
+              { text: prompt }
+            ],
+          }
         ],
-        response_format: {
-          type: 'json_object',
+        generationConfig: {
+          temperature: 0.2,
+          responseMimeType: 'application/json',
         },
-        temperature: 0.2,
       }),
     })
 
     if (!response.ok) {
       const errText = await response.text()
-      console.error('OpenRouter API Error:', errText)
-      return NextResponse.json({ error: 'Error al consultar API de OpenRouter' }, { status: 500 })
+      console.error('Gemini API Error:', errText)
+      return NextResponse.json({ error: 'Error al consultar API de Gemini' }, { status: 500 })
     }
 
     const resJson = await response.json()
-    const textResult = resJson?.choices?.[0]?.message?.content
+    const textResult = resJson?.candidates?.[0]?.content?.parts?.[0]?.text
     if (!textResult) {
-      return NextResponse.json({ error: 'Respuesta vacía de OpenRouter' }, { status: 500 })
+      return NextResponse.json({ error: 'Respuesta vacía de Gemini' }, { status: 500 })
     }
 
     // 7. Parse and Validate JSON
