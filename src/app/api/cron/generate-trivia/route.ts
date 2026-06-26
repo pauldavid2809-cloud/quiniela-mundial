@@ -104,7 +104,9 @@ export async function POST(req: Request) {
 
 Para asegurar que sea variada, enfócate preferentemente en este subtema o área: ${randomSubtopic}.
 
-La pregunta debe ser interesante, con dificultad variada (de media a alta), y referirse estrictamente al contexto de los Mundiales de la FIFA. Evita a toda costa preguntas genéricas de fútbol de clubes (como Champions League, Copa Libertadores, ligas europeas, etc.) o jugadores en sus clubes; todo debe estar relacionado con la Copa del Mundo.
+La pregunta debe ser interesante, con dificultad variada (de media a alta), y referirse estrictamente al contexto de los Mundiales de la FIFA. Evita a toda costa preguntas genéricas de fútbol de clubes o jugadores en sus clubes; todo debe estar relacionado con la Copa del Mundo.
+
+CRÍTICO: Haz que la pregunta y las opciones sean muy breves, cortas y directas al grano. Evita preámbulos, descripciones o explicaciones innecesariamente largas en el enunciado de la pregunta y en las opciones de respuesta.
 
 ${previousQuestionsText ? `IMPORTANTE: Para evitar repeticiones, NO debes generar ninguna pregunta idéntica ni muy similar a las siguientes preguntas que ya existen en la base de datos:\n${previousQuestionsText}` : ''}
 
