@@ -20,22 +20,33 @@ export async function POST(_req: NextRequest) {
     let errors = 0
 
     for (const match of matches) {
-      // Use home+away+date as unique key since api_id might not be reliable
-      const uniqueKey = `${match.home_team}_${match.away_team}_${match.match_date?.split('T')[0]}`
+      let existing = null
 
-      const { data: existing } = await supabase
-        .from('matches')
-        .select('id')
-        .eq('home_team', match.home_team)
-        .eq('away_team', match.away_team)
-        .single()
+      if (match.api_id) {
+        const { data } = await supabase
+          .from('matches')
+          .select('id')
+          .eq('api_id', match.api_id)
+          .single()
+        existing = data
+      }
+
+      if (!existing) {
+        const { data } = await supabase
+          .from('matches')
+          .select('id')
+          .eq('home_team', match.home_team)
+          .eq('away_team', match.away_team)
+          .single()
+        existing = data
+      }
 
       if (existing) {
         const { error } = await supabase
           .from('matches')
           .update({ ...match, updated_at: new Date().toISOString() })
           .eq('id', existing.id)
-        if (error) errors++
+        if (error) { console.error('Update error:', error.message); errors++ }
         else updated++
       } else {
         const { error } = await supabase.from('matches').insert(match)

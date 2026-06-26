@@ -19,16 +19,20 @@ export async function POST() {
     // 2. Fetch all DB matches in a single query
     const { data: dbMatches, error: dbMatchesError } = await supabase
       .from('matches')
-      .select('id, phase, status, home_score, away_score, home_team, away_team')
+      .select('id, api_id, phase, status, home_score, away_score, home_team, away_team')
 
     if (dbMatchesError || !dbMatches) {
       throw new Error('Error al obtener partidos de la base de datos')
     }
 
-    const dbMatchMap = new Map<string, any>()
+    const dbMatchMapByApiId = new Map<number, any>()
+    const dbMatchMapByName = new Map<string, any>()
     for (const dbMatch of dbMatches) {
+      if (dbMatch.api_id) {
+        dbMatchMapByApiId.set(dbMatch.api_id, dbMatch)
+      }
       const key = `${dbMatch.home_team}_${dbMatch.away_team}`
-      dbMatchMap.set(key, dbMatch)
+      dbMatchMapByName.set(key, dbMatch)
     }
 
     // 3. Fetch all phases once to get points values
@@ -52,8 +56,7 @@ export async function POST() {
     for (const match of recentMatches) {
       if (match.home_score === null || match.away_score === null) continue
 
-      const key = `${match.home_team}_${match.away_team}`
-      const dbMatch = dbMatchMap.get(key)
+      const dbMatch = dbMatchMapByApiId.get(match.api_id) || dbMatchMapByName.get(`${match.home_team}_${match.away_team}`)
 
       if (!dbMatch) continue
 
