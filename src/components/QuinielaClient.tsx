@@ -105,8 +105,14 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
   const groupPhaseDeadline = new Date('2026-06-15T14:39:43Z').getTime()
 
   // Check if a specific match is locked for predictions.
-  // Locked if status is 'completed' or if current time is 1 hour or more past the match start date/time.
+  // Locked if status is 'completed', if the phase is locked in DB, or if current time is 1 hour or more past the match start date/time.
   const isMatchLocked = (m: Match) => {
+    // If the phase itself is locked in the database, lock all its matches (except groups which uses date-based locking)
+    const phaseInfo = phases.find(p => p.name === m.phase)
+    if (phaseInfo && !phaseInfo.is_unlocked && m.phase !== 'groups') {
+      return true
+    }
+
     const currentTime = new Date().getTime()
 
     // Special deadline rule for Group Phase (1-hour window from now)
