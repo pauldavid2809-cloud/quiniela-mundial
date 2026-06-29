@@ -74,7 +74,7 @@ function BracketCard({
   const isLive = match.status === 'live'
   const isPlaceholderHome = !match.home_team || /^[\dWL]/.test(match.home_team.trim())
   const isPlaceholderAway = !match.away_team || /^[\dWL]/.test(match.away_team.trim())
-  const canEdit = !locked && !isPlaceholderHome && !isPlaceholderAway
+  const canEdit = !locked
 
   const timeZone = 'America/Caracas'
   let dateStr = ''
