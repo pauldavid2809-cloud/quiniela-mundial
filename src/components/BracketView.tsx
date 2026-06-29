@@ -469,14 +469,16 @@ export default function BracketView({ matches, predictions, phases, onPredict, s
   ].filter(r => byPhase[r.phase]?.length > 0)
 
   const CARD_H = 96
+  const BASE_GAP = 16
 
-  function getGap(idx: number): number {
-    if (idx === 0) return 8
-    return CARD_H * (Math.pow(2, idx) - 1) + getGap(idx - 1) * (Math.pow(2, idx) - 1) + 8
+  function getGap(pi: number): number {
+    if (pi === 0) return BASE_GAP
+    return 2 * getGap(pi - 1) + CARD_H
   }
-  function getTopPad(idx: number): number {
-    if (idx === 0) return 0
-    return (getGap(idx) - getGap(idx - 1)) / 2
+
+  function getTopPad(pi: number): number {
+    if (pi === 0) return 0
+    return getTopPad(pi - 1) + CARD_H / 2 + getGap(pi - 1) / 2
   }
   function phaseIdx(phase: string) { return PHASE_ORDER.indexOf(phase) }
 
