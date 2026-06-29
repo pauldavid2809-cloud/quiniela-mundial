@@ -7,6 +7,7 @@ import { es } from 'date-fns/locale'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import MatchCard from './MatchCard'
+import BracketView from './BracketView'
 
 interface Phase {
   id: number
@@ -311,8 +312,60 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
             Los partidos de esta fase se agregarán pronto.
           </p>
         </div>
+      ) : activePhase !== 'groups' ? (
+        // Knockout phases: show interactive bracket
+        <div className="animate-fade-in">
+          <BracketView
+            matches={matches.filter(m => m.phase !== 'groups')}
+            predictions={localPredictions}
+          />
+          {/* Also show current phase match list below bracket for editing */}
+          <div className="mt-10">
+            <div className="flex items-center gap-3 mb-5">
+              <span className="font-display text-xs text-gold-500 uppercase tracking-widest bg-gold-950/20 border border-gold-500/25 px-3 py-1 rounded-full">
+                ✏️ Editar predicciones — {currentPhase?.display_name}
+              </span>
+              <div className="h-px flex-1 bg-gradient-to-r from-gold-500/20 to-transparent" />
+            </div>
+            <div className="space-y-8">
+              {sortedDays.map(([dateStr, dayData], idx) => (
+                <div key={dateStr} className={`animate-slide-up stagger-${Math.min(idx + 1, 5)}`}>
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="font-display text-xs text-white/30 uppercase tracking-widest capitalize">
+                      📅 {dayData.dateLabel}
+                    </span>
+                    <div className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent" />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {dayData.matches.map(match => {
+                      const pred = localPredictions[match.id] || {
+                        prediction: null,
+                        predicted_home_score: null,
+                        predicted_away_score: null
+                      }
+                      const isLocked = isMatchLocked(match)
+                      return (
+                        <MatchCard
+                          key={match.id}
+                          match={match}
+                          prediction={pred.prediction}
+                          predictedHomeScore={pred.predicted_home_score}
+                          predictedAwayScore={pred.predicted_away_score}
+                          onPredict={handlePredict}
+                          saving={saving === match.id}
+                          pointsValue={currentPhase?.points_value || 1}
+                          isPhaseLocked={isLocked}
+                        />
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       ) : (
-        // Render matches grouped by day
+        // Groups phase: show matches grouped by day
         <div className="space-y-8">
           {sortedDays.map(([dateStr, dayData], idx) => (
             <div key={dateStr} className={`animate-slide-up stagger-${Math.min(idx + 1, 5)}`}>
@@ -330,7 +383,6 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
                     predicted_away_score: null
                   }
                   const isLocked = isMatchLocked(match)
-                  
                   return (
                     <MatchCard
                       key={match.id}
