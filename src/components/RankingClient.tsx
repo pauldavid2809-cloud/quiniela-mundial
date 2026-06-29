@@ -96,7 +96,7 @@ export default function RankingClient({
     {
       bg: 'linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,215,0,0.03))',
       border: 'border-amber-500/40',
-      rankBg: 'bg-amber-500 text-navy-950',
+      rankBg: 'bg-amber-500 text-navy-900',
       trophyColor: 'text-amber-400',
       badge: 'CAMPEÓN',
       order: 'order-1 sm:order-2 scale-105 sm:scale-110 z-10'
@@ -104,7 +104,7 @@ export default function RankingClient({
     {
       bg: 'linear-gradient(135deg, rgba(192,192,192,0.15), rgba(192,192,192,0.03))',
       border: 'border-slate-400/35',
-      rankBg: 'bg-slate-400 text-navy-950',
+      rankBg: 'bg-slate-400 text-navy-900',
       trophyColor: 'text-slate-400',
       badge: 'SUBCAMPEÓN',
       order: 'order-2 sm:order-1'
@@ -313,7 +313,7 @@ export default function RankingClient({
 
               {/* Avatar representation with trophy */}
               <div className="relative mb-3">
-                <div className={`w-16 h-16 rounded-full flex items-center justify-center font-display text-2xl font-bold border-2 ${config.border} bg-navy-950 text-white`}>
+                <div className={`w-16 h-16 rounded-full flex items-center justify-center font-display text-2xl font-bold border-2 ${config.border} bg-navy-900 text-white`}>
                   {(player.display_name || player.username || '?')[0].toUpperCase()}
                 </div>
                 <div className={`absolute -bottom-1 -right-1 w-7 h-7 rounded-full flex items-center justify-center text-sm shadow ${config.rankBg}`}>
@@ -459,8 +459,8 @@ export default function RankingClient({
 
       {/* Head-to-Head Modal */}
       {selectedPlayer && userProfile && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-950/80 backdrop-blur-md animate-fade-in">
-          <div className="glass-card w-full max-w-4xl max-h-[85vh] flex flex-col border border-white/10 overflow-hidden shadow-2xl relative">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-navy-800 border border-white/10 w-full max-w-4xl max-h-[85vh] flex flex-col rounded-xl overflow-hidden shadow-2xl relative">
             
             {/* Modal Header */}
             <div className="p-4 sm:p-6 border-b border-white/10 flex items-center justify-between bg-white/3">
@@ -490,7 +490,7 @@ export default function RankingClient({
               <div className="grid grid-cols-3 items-center gap-2 sm:gap-4 bg-gradient-to-b from-white/5 to-transparent p-4 rounded-xl border border-white/5">
                 {/* User A (You) */}
                 <div className="text-center">
-                  <div className="w-12 h-12 sm:w-16 h-16 rounded-full bg-gold-500 text-navy-950 mx-auto flex items-center justify-center font-display text-xl sm:text-2xl font-bold mb-2">
+                  <div className="w-12 h-12 sm:w-16 h-16 rounded-full bg-gold-500 text-navy-900 mx-auto flex items-center justify-center font-display text-xl sm:text-2xl font-bold mb-2">
                     {(userProfile.display_name || userProfile.username || '?')[0].toUpperCase()}
                   </div>
                   <div className="font-semibold text-white text-xs sm:text-sm truncate">
@@ -620,7 +620,7 @@ export default function RankingClient({
                             key={mode}
                             onClick={() => setFilterMatchMode(mode)}
                             className={`text-[9px] font-bold uppercase tracking-wider px-2 py-1 rounded transition-colors ${
-                              filterMatchMode === mode ? 'bg-gold-500 text-navy-950' : 'text-white/60 hover:text-white'
+                              filterMatchMode === mode ? 'bg-gold-500 text-navy-900' : 'text-white/60 hover:text-white'
                             }`}
                           >
                             {mode === 'all' ? 'Todos' : mode === 'differences' ? 'Diferencias' : 'Coincidencias'}
