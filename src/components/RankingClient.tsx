@@ -175,20 +175,24 @@ export default function RankingClient({
   }, [selectedPlayer])
 
   // Find the current active phase of the tournament dynamically
+  // by finding the match that is closest in time to the current date.
   const getCurrentPhaseName = () => {
-    const unlockedPhase = phases.find(p => p.is_unlocked)
-    if (unlockedPhase) return unlockedPhase.name
+    if (initialMatches.length === 0) return 'groups'
 
-    const liveMatch = initialMatches.find(m => m.status === 'live')
-    if (liveMatch) return liveMatch.phase
+    const currentTime = new Date().getTime()
+    let closestMatch = initialMatches[0]
+    let minDiff = Infinity
 
-    const completedMatches = initialMatches.filter(m => m.status === 'completed' && m.match_date)
-    if (completedMatches.length > 0) {
-      const latest = [...completedMatches].sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime())[0]
-      return latest.phase
-    }
+    initialMatches.forEach(m => {
+      if (!m.match_date) return
+      const diff = Math.abs(new Date(m.match_date).getTime() - currentTime)
+      if (diff < minDiff) {
+        minDiff = diff
+        closestMatch = m
+      }
+    })
 
-    return 'groups'
+    return closestMatch.phase
   }
 
   const currentPhaseName = getCurrentPhaseName()
