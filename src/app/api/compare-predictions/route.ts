@@ -5,7 +5,7 @@ const groupPhaseDeadline = new Date('2026-06-15T14:39:43Z').getTime()
 
 const isMatchLocked = (m: any, phases: any[]) => {
   const phaseInfo = phases.find(p => p.name === m.phase)
-  if (phaseInfo && !phaseInfo.is_unlocked && m.phase !== 'groups') {
+  if (phaseInfo && !phaseInfo.is_unlocked && m.phase !== 'groups' && m.phase !== 'round32') {
     return true
   }
 
@@ -16,7 +16,7 @@ const isMatchLocked = (m: any, phases: any[]) => {
     if (m.status === 'scheduled') return false
   }
 
-  if (m.status === 'completed') return true
+  if (m.status === 'completed' || m.status === 'live') return true
   if (!m.match_date) return false
   const matchTime = new Date(m.match_date).getTime()
   const gracePeriodDuration = 60 * 60 * 1000 // 1 hour grace period

@@ -35,8 +35,8 @@ const PHASE_ORDER = ['round32', 'round16', 'quarterfinals', 'semifinals', 'final
 
 function isMatchLocked(m: Match, phases: { name: string; is_unlocked: boolean }[]): boolean {
   const phaseInfo = phases.find(p => p.name === m.phase)
-  if (phaseInfo && !phaseInfo.is_unlocked && m.phase !== 'groups') return true
-  if (m.status === 'completed') return true
+  if (phaseInfo && !phaseInfo.is_unlocked && m.phase !== 'groups' && m.phase !== 'round32') return true
+  if (m.status === 'completed' || m.status === 'live') return true
   if (!m.match_date) return false
   return Date.now() >= new Date(m.match_date).getTime() + 60 * 60 * 1000
 }

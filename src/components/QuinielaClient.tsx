@@ -108,9 +108,9 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
   // Check if a specific match is locked for predictions.
   // Locked if status is 'completed', if the phase is locked in DB, or if current time is 1 hour or more past the match start date/time.
   const isMatchLocked = (m: Match) => {
-    // If the phase itself is locked in the database, lock all its matches (except groups which uses date-based locking)
+    // If the phase itself is locked in the database, lock all its matches (except groups and round32 which bypass it)
     const phaseInfo = phases.find(p => p.name === m.phase)
-    if (phaseInfo && !phaseInfo.is_unlocked && m.phase !== 'groups') {
+    if (phaseInfo && !phaseInfo.is_unlocked && m.phase !== 'groups' && m.phase !== 'round32') {
       return true
     }
 
@@ -133,7 +133,7 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
     }
 
     // Default rules (for live matches, other phases, or completed matches)
-    if (m.status === 'completed') return true
+    if (m.status === 'completed' || m.status === 'live') return true
     if (!m.match_date) return false
     const matchTime = new Date(m.match_date).getTime()
     const gracePeriodDuration = 60 * 60 * 1000 // 1 hour grace period
