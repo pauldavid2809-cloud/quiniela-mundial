@@ -3,15 +3,10 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 
 const groupPhaseDeadline = new Date('2026-06-15T14:39:43Z').getTime()
 
-const isMatchLocked = (m: any, phases: any[], requesterUserId?: string) => {
+const isMatchLocked = (m: any, phases: any[]) => {
   const phaseInfo = phases.find(p => p.name === m.phase)
   if (phaseInfo && !phaseInfo.is_unlocked && m.phase !== 'groups') {
-    // Bypass phase lock for Jose (username: 1darkred2_ / ID: b6ca78bf-46bf-4eaf-beba-a42b930fc0e6)
-    if (requesterUserId === 'b6ca78bf-46bf-4eaf-beba-a42b930fc0e6') {
-      // Continue to default time-based lock checks
-    } else {
-      return true
-    }
+    return true
   }
 
   const currentTime = new Date().getTime()
@@ -68,7 +63,7 @@ export async function GET(request: Request) {
   // 4. Sanitize predictions of target user (censor unlocked ones)
   const sanitized = predictions.map(p => {
     const match = matches.find(m => m.id === p.match_id)
-    const locked = match ? isMatchLocked(match, phases, user.id) : false
+    const locked = match ? isMatchLocked(match, phases) : false
     
     if (!locked) {
       return {
