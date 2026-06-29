@@ -302,7 +302,7 @@ export default function RankingClient({
   }).sort((a, b) => {
     if (!a.match.match_date) return 1
     if (!b.match.match_date) return -1
-    return new Date(b.match.match_date).getTime() - new Date(a.match.match_date).getTime()
+    return new Date(a.match.match_date).getTime() - new Date(b.match.match_date).getTime()
   })
 
   return (
