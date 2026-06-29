@@ -158,12 +158,11 @@ export default function RankingClient({
     const loadPlayerPredictions = async () => {
       setLoading(true)
       try {
-        const { data, error } = await supabase
-          .from('predictions')
-          .select('*')
-          .eq('user_id', selectedPlayer.id)
-        
-        if (error) throw error
+        const response = await fetch(`/api/compare-predictions?userId=${selectedPlayer.id}`)
+        if (!response.ok) {
+          throw new Error(`API error: ${response.statusText}`)
+        }
+        const data = await response.json()
         setComparedPredictions(data || [])
       } catch (err) {
         console.error('Error fetching player predictions:', err)
