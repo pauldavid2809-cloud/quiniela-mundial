@@ -110,7 +110,10 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
     // If the phase itself is locked in the database, lock all its matches (except groups which uses date-based locking)
     const phaseInfo = phases.find(p => p.name === m.phase)
     if (phaseInfo && !phaseInfo.is_unlocked && m.phase !== 'groups') {
-      return true
+      // Bypass phase lock for Jose (username: 1darkred2_ / ID: b6ca78bf-46bf-4eaf-beba-a42b930fc0e6)
+      if (userId !== 'b6ca78bf-46bf-4eaf-beba-a42b930fc0e6') {
+        return true
+      }
     }
 
     const currentTime = new Date().getTime()
