@@ -175,25 +175,54 @@ export default function RankingClient({
     loadPlayerPredictions()
   }, [selectedPlayer])
 
-  // Process data for side-by-side comparison
+  // Find the current active phase of the tournament dynamically
+  const getCurrentPhaseName = () => {
+    const unlockedPhase = phases.find(p => p.is_unlocked)
+    if (unlockedPhase) return unlockedPhase.name
+
+    const liveMatch = initialMatches.find(m => m.status === 'live')
+    if (liveMatch) return liveMatch.phase
+
+    const completedMatches = initialMatches.filter(m => m.status === 'completed' && m.match_date)
+    if (completedMatches.length > 0) {
+      const latest = [...completedMatches].sort((a, b) => new Date(b.match_date).getTime() - new Date(a.match_date).getTime())[0]
+      return latest.phase
+    }
+
+    return 'groups'
+  }
+
+  const currentPhaseName = getCurrentPhaseName()
+  const currentPhaseInfo = phases.find(p => p.name === currentPhaseName)
+
+  // Process data for side-by-side comparison (scoped to the current phase)
   const getComparisonStats = () => {
     if (!selectedPlayer || !userProfile) return null
 
-    // Prediction points count
-    const pPointsA = initialUserPredictions.reduce((acc, p) => acc + (p.points_earned || 0), 0)
-    const pPointsB = comparedPredictions.reduce((acc, p) => acc + (p.points_earned || 0), 0)
+    // Prediction points in this phase
+    const pPointsA = initialUserPredictions
+      .filter(p => {
+        const match = initialMatches.find(m => m.id === p.match_id)
+        return match && match.phase === currentPhaseName
+      })
+      .reduce((acc, p) => acc + (p.points_earned || 0), 0)
 
-    // Trivia points count
-    const tPointsA = Math.max(0, userProfile.total_points - pPointsA)
-    const tPointsB = Math.max(0, selectedPlayer.total_points - pPointsB)
+    const pPointsB = comparedPredictions
+      .filter(p => {
+        const match = initialMatches.find(m => m.id === p.match_id)
+        return match && match.phase === currentPhaseName
+      })
+      .reduce((acc, p) => acc + (p.points_earned || 0), 0)
 
-    // Match counts
+    // Match counts in this phase
     let coincidences = 0
     let differences = 0
     let correctExactA = 0
     let correctExactB = 0
 
     initialMatches.forEach(match => {
+      if (match.phase !== currentPhaseName) return
+
       const predA = initialUserPredictions.find(p => p.match_id === match.id)
       const predB = comparedPredictions.find(p => p.match_id === match.id)
       
@@ -228,8 +257,6 @@ export default function RankingClient({
     return {
       pPointsA,
       pPointsB,
-      tPointsA,
-      tPointsB,
       coincidences,
       differences,
       correctExactA,
@@ -262,6 +289,9 @@ export default function RankingClient({
       comparisonType
     }
   }).filter(item => {
+    // Only show matches of the current phase!
+    if (item.match.phase !== currentPhaseName) return false
+
     if (filterMatchMode === 'all') return true
     if (filterMatchMode === 'differences') return item.comparisonType === 'difference'
     if (filterMatchMode === 'coincidences') return item.comparisonType === 'coincidence'
@@ -534,13 +564,15 @@ export default function RankingClient({
                 <>
                   {/* Detailed Stat Bars */}
                   <div className="space-y-4">
-                    <h4 className="font-display text-xs text-white/50 uppercase tracking-widest">DESGLOSE DE PUNTOS</h4>
+                    <h4 className="font-display text-xs text-white/50 uppercase tracking-widest">
+                      ESTADÍSTICAS DE LA FASE ({currentPhaseInfo?.display_name || currentPhaseName})
+                    </h4>
                     
                     {/* Stat Row: Quiniela Points */}
                     <div className="space-y-1">
                       <div className="flex justify-between text-xs font-semibold">
                         <span className="text-gold-400">{stats.pPointsA} pts</span>
-                        <span className="text-white/60">Puntos de Quiniela</span>
+                        <span className="text-white/60">Puntos en esta Fase</span>
                         <span className="text-amber-400">{stats.pPointsB} pts</span>
                       </div>
                       <div className="h-2 bg-white/5 rounded-full overflow-hidden flex">
@@ -555,30 +587,11 @@ export default function RankingClient({
                       </div>
                     </div>
 
-                    {/* Stat Row: Trivia Points */}
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-xs font-semibold">
-                        <span className="text-gold-400">{stats.tPointsA} pts</span>
-                        <span className="text-white/60">Puntos de Trivia</span>
-                        <span className="text-amber-400">{stats.tPointsB} pts</span>
-                      </div>
-                      <div className="h-2 bg-white/5 rounded-full overflow-hidden flex">
-                        <div 
-                          className="bg-gold-500 h-full transition-all" 
-                          style={{ width: `${(stats.tPointsA || stats.tPointsB) ? (stats.tPointsA / (stats.tPointsA + stats.tPointsB || 1)) * 100 : 50}%` }}
-                        />
-                        <div 
-                          className="bg-amber-600 h-full transition-all" 
-                          style={{ width: `${(stats.tPointsA || stats.tPointsB) ? (stats.tPointsB / (stats.tPointsA + stats.tPointsB || 1)) * 100 : 50}%` }}
-                        />
-                      </div>
-                    </div>
-
                     {/* Stat Row: Exact Scores Corrected */}
                     <div className="space-y-1">
                       <div className="flex justify-between text-xs font-semibold">
                         <span className="text-gold-400">{stats.correctExactA} aciertos</span>
-                        <span className="text-white/60">Marcadores Exactos</span>
+                        <span className="text-white/60">Marcadores Exactos (Fase)</span>
                         <span className="text-amber-400">{stats.correctExactB} aciertos</span>
                       </div>
                       <div className="h-2 bg-white/5 rounded-full overflow-hidden flex">
@@ -611,7 +624,7 @@ export default function RankingClient({
                   {/* Match-by-match comparison list */}
                   <div className="space-y-3">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-2">
-                      <h4 className="font-display text-xs text-white/50 uppercase tracking-widest">COMPARACIÓN DE PARTIDOS</h4>
+                      <h4 className="font-display text-xs text-white/50 uppercase tracking-widest">PARTIDOS DE LA FASE</h4>
                       
                       {/* Filter modes */}
                       <div className="flex gap-1 bg-black/20 p-0.5 rounded-lg border border-white/5 self-start">
