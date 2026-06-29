@@ -235,6 +235,32 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
       return match && match.phase === phaseName && pred.predicted_home_score !== null && pred.predicted_away_score !== null
     }).length
 
+  // Compute knockout summary for the tab badge
+  const knockoutPhases = ['round32', 'round16', 'quarterfinals', 'semifinals', 'final']
+  const knockoutMatches = matches.filter(m => knockoutPhases.includes(m.phase))
+  const knockoutPredCount = Object.entries(localPredictions).filter(([matchId, pred]) => {
+    const match = matches.find(m => m.id === Number(matchId))
+    return match && knockoutPhases.includes(match.phase) && pred.predicted_home_score !== null && pred.predicted_away_score !== null
+  }).length
+  const hasKnockout = knockoutMatches.length > 0
+
+  // The two simplified tabs
+  const simpleTabs = [
+    { id: 'groups', label: '⚽ Grupos', predCount: phasePredCount('groups'), matchCount: phaseMatchCount('groups') },
+    { id: 'knockout', label: '🏆 Fase Eliminatoria', predCount: knockoutPredCount, matchCount: knockoutMatches.length, disabled: !hasKnockout },
+  ]
+  const activeTab = knockoutPhases.includes(activePhase) ? 'knockout' : 'groups'
+
+  const handleTabChange = (tabId: string) => {
+    if (tabId === 'groups') {
+      setActivePhase('groups')
+    } else {
+      // Pick first available knockout phase
+      const firstKnockout = knockoutPhases.find(p => matches.some(m => m.phase === p))
+      if (firstKnockout) setActivePhase(firstKnockout)
+    }
+  }
+
   return (
     <div className="animate-fade-in">
       {/* Header */}
@@ -247,94 +273,77 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
         </p>
       </div>
 
-      {/* Phase tabs */}
-      <div className="flex gap-0 overflow-x-auto mb-6 border-b border-white/10 pb-0 scrollbar-hide">
-        {phases.map(phase => {
-          const predCount = phasePredCount(phase.name)
-          const matchCount = phaseMatchCount(phase.name)
-          const isPhaseLocked = getPhaseLockStatus(phase.name)
-          const hasPlaceholders = getPhasePlaceholderStatus(phase.name)
-          // Convenient auto-open: accessible if Groups, manually unlocked, or matches loaded and no placeholders
-          const isPhaseOpen = phase.name === 'groups' || phase.is_unlocked || (matchCount > 0 && !hasPlaceholders)
-
-          return (
-            <button
-              key={phase.name}
-              onClick={() => isPhaseOpen && setActivePhase(phase.name)}
-              className={`phase-tab flex items-center gap-1.5 ${
-                activePhase === phase.name ? 'active' : isPhaseOpen ? '' : 'locked'
-              }`}
-            >
-              {isPhaseLocked ? (
-                <span className="text-xs" title="Fase en curso (algunos partidos iniciados/finalizados)">⏳</span>
-              ) : !isPhaseOpen ? (
-                <span className="text-xs" title="Esperando confirmación de clasificados">🔒</span>
-              ) : null}
-              <span>{phase.display_name}</span>
-              {isPhaseOpen && matchCount > 0 && (
-                <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded-full">
-                  {predCount}/{matchCount}
-                </span>
-              )}
-              <span className="text-[10px] text-gold-500/60 ml-0.5">+{phase.points_value}pt</span>
-            </button>
-          )
-        })}
+      {/* Simplified 2-tab navigation */}
+      <div className="flex gap-0 mb-6 border-b border-white/10">
+        {simpleTabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => !tab.disabled && handleTabChange(tab.id)}
+            className={`phase-tab flex items-center gap-1.5 ${
+              activeTab === tab.id ? 'active' : tab.disabled ? 'locked' : ''
+            }`}
+          >
+            {tab.disabled && <span className="text-xs">🔒</span>}
+            <span>{tab.label}</span>
+            {!tab.disabled && tab.matchCount > 0 && (
+              <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded-full">
+                {tab.predCount}/{tab.matchCount}
+              </span>
+            )}
+          </button>
+        ))}
       </div>
 
-      {/* Phase lock info banner */}
-      {activePhase === 'groups' && new Date().getTime() >= groupPhaseDeadline ? (
+      {/* Phase lock info banner (groups only) */}
+      {activeTab === 'groups' && new Date().getTime() >= groupPhaseDeadline ? (
         <div className="mb-4 p-3 bg-red-950/30 border border-red-500/30 text-red-300 text-sm rounded-lg flex items-center gap-2 animate-fade-in">
           <span>🔒</span>
           <span>La fase de grupos ha cerrado para predicciones. Todos los partidos se encuentran bloqueados.</span>
         </div>
-      ) : isCurrentPhaseLocked ? (
+      ) : activeTab === 'groups' && isCurrentPhaseLocked ? (
         <div className="mb-4 p-3 bg-amber-950/30 border border-amber-500/30 text-amber-300 text-sm rounded-lg flex items-center gap-2">
           <span>⏳</span>
-          <span>Esta fase se encuentra en curso. Aún puedes registrar o modificar predicciones para partidos que no hayan comenzado o tengan menos de 1 hora de juego (tiempo de gracia).</span>
+          <span>Esta fase se encuentra en curso. Aún puedes registrar o modificar predicciones para partidos que no hayan comenzado o tengan menos de 1 hora de juego.</span>
         </div>
       ) : null}
 
-      {/* Phase locked message */}
-      {!isCurrentPhaseOpen ? (
-        <div className="glass-card p-12 text-center">
-          <div className="text-5xl mb-4">🔒</div>
-          <h3 className="font-display text-2xl text-white/70 mb-2">FASE BLOQUEADA</h3>
-          <p className="text-white/40 max-w-md mx-auto">
-            Esta fase se encuentra bloqueada. Se abrirá automáticamente para predicciones una vez que se definan y confirmen todos los equipos participantes de sus partidos.
-          </p>
-        </div>
-      ) : phaseMatches.length === 0 ? (
-        <div className="glass-card p-12 text-center">
-          <div className="text-5xl mb-4">⏳</div>
-          <h3 className="font-display text-2xl text-white/70 mb-2">SIN PARTIDOS AÚN</h3>
-          <p className="text-white/40">
-            Los partidos de esta fase se agregarán pronto.
-          </p>
-        </div>
-      ) : activePhase !== 'groups' ? (
-        // Knockout phases: show interactive bracket
+      {/* KNOCKOUT TAB: bracket view */}
+      {activeTab === 'knockout' ? (
         <div className="animate-fade-in">
-          <BracketView
-            matches={matches.filter(m => m.phase !== 'groups')}
-            predictions={localPredictions}
-          />
-          {/* Also show current phase match list below bracket for editing */}
-          <div className="mt-10">
-            <div className="flex items-center gap-3 mb-5">
-              <span className="font-display text-xs text-gold-500 uppercase tracking-widest bg-gold-950/20 border border-gold-500/25 px-3 py-1 rounded-full">
-                ✏️ Editar predicciones — {currentPhase?.display_name}
-              </span>
-              <div className="h-px flex-1 bg-gradient-to-r from-gold-500/20 to-transparent" />
+          {!hasKnockout ? (
+            <div className="glass-card p-12 text-center">
+              <div className="text-5xl mb-4">⏳</div>
+              <h3 className="font-display text-2xl text-white/70 mb-2">SIN PARTIDOS AÚN</h3>
+              <p className="text-white/40">Los partidos eliminatorios se agregarán pronto.</p>
             </div>
+          ) : (
+            <BracketView
+              matches={knockoutMatches}
+              predictions={localPredictions}
+              phases={phases}
+              onPredict={handlePredict}
+              saving={saving}
+            />
+          )}
+        </div>
+      ) : (
+        /* GROUPS TAB: day-grouped match cards */
+        <>
+          {phaseMatches.length === 0 ? (
+            <div className="glass-card p-12 text-center">
+              <div className="text-5xl mb-4">⏳</div>
+              <h3 className="font-display text-2xl text-white/70 mb-2">SIN PARTIDOS AÚN</h3>
+              <p className="text-white/40">Los partidos de esta fase se agregarán pronto.</p>
+            </div>
+          ) : (
             <div className="space-y-8">
               {sortedDays.map(([dateStr, dayData], idx) => (
                 <div key={dateStr} className={`animate-slide-up stagger-${Math.min(idx + 1, 5)}`}>
                   <div className="flex items-center gap-3 mb-4">
-                    <span className="font-display text-xs text-white/30 uppercase tracking-widest capitalize">
+                    <span className="font-display text-xs text-gold-500 uppercase tracking-widest bg-gold-950/20 border border-gold-500/25 px-3 py-1 rounded-full capitalize">
                       📅 {dayData.dateLabel}
                     </span>
-                    <div className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent" />
+                    <div className="h-px flex-1 bg-gradient-to-r from-gold-500/20 to-transparent" />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {dayData.matches.map(match => {
@@ -362,46 +371,10 @@ export default function QuinielaClient({ phases, matches, predictions, userId }:
                 </div>
               ))}
             </div>
-          </div>
-        </div>
-      ) : (
-        // Groups phase: show matches grouped by day
-        <div className="space-y-8">
-          {sortedDays.map(([dateStr, dayData], idx) => (
-            <div key={dateStr} className={`animate-slide-up stagger-${Math.min(idx + 1, 5)}`}>
-              <div className="flex items-center gap-3 mb-4">
-                <span className="font-display text-xs text-gold-500 uppercase tracking-widest bg-gold-950/20 border border-gold-500/25 px-3 py-1 rounded-full capitalize">
-                  📅 {dayData.dateLabel}
-                </span>
-                <div className="h-px flex-1 bg-gradient-to-r from-gold-500/20 to-transparent" />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {dayData.matches.map(match => {
-                  const pred = localPredictions[match.id] || {
-                    prediction: null,
-                    predicted_home_score: null,
-                    predicted_away_score: null
-                  }
-                  const isLocked = isMatchLocked(match)
-                  return (
-                    <MatchCard
-                      key={match.id}
-                      match={match}
-                      prediction={pred.prediction}
-                      predictedHomeScore={pred.predicted_home_score}
-                      predictedAwayScore={pred.predicted_away_score}
-                      onPredict={handlePredict}
-                      saving={saving === match.id}
-                      pointsValue={currentPhase?.points_value || 1}
-                      isPhaseLocked={isLocked}
-                    />
-                  )
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
     </div>
   )
 }
+
